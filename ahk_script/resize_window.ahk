@@ -5,10 +5,11 @@ targetHeight := 1400
 ; === Window-specific padding adjustments ===
 ; Format: [WindowIdentifier] := "leftPadding,topPadding,rightPadding,bottomPadding"
 WindowAdjustments := {}
-WindowAdjustments["Cursor"] := "7,0,7,7"    ; Cursor needs padding on left, right and bottom
+WindowAdjustments["Cursor"] := "8,0,8,8" 
+WindowAdjustments["Discord"] := "8,0,8,8"
 
-; === Ctrl + Alt + C — Center current window with window-specific padding ===
-^!c::
+; === Win + C — Center current window with window-specific padding ===
+#c::
 {
     ; Get active window information
     WinGetClass, activeClass, A
@@ -45,7 +46,28 @@ WindowAdjustments["Cursor"] := "7,0,7,7"    ; Cursor needs padding on left, righ
 }
 return
 
-; === Debug Hotkey — Ctrl+Alt+D to show window info ===
+; === Win + T — Open WezTerm or bring to foreground ===
+#t::
+{
+    ; Check if WezTerm is already running
+    If WinExist("ahk_exe wezterm-gui.exe") or WinExist("ahk_exe wezterm.exe")
+    {
+        ; Minimize all windows first (Win+D)
+        Send, #d
+        Sleep, 20
+        
+        ; Then activate WezTerm
+        WinActivate
+    }
+    else
+    {
+        ; Launch WezTerm if not running
+        Run, wezterm
+    }
+}
+return
+
+;; === Debug Hotkey — Ctrl+Alt+D to show window info ===
 ^!d::
 {
     WinGetClass, class, A
@@ -54,4 +76,3 @@ return
     MsgBox, Window Class: %class%`nProcess: %process%`nTitle: %title%
 }
 return
-

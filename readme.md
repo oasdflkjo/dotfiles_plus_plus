@@ -1,8 +1,23 @@
-# Config files for the environment
+# Windows Ricing Configuration
 
-1. wezterm
-2. ps1 profile with symlink
-3. nvim config with symlink
+![Desktop Screenshot](image.png)
 
-C:\Users\<user>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
-C:\Users\<user>\AppData\Local\nvim\
+## Overview
+This repository contains configuration files for customizing Windows with a minimal and efficient setup.
+
+## Main Components
+- **WezTerm** - Terminal emulator
+- **PowerShell** - Shell environment
+- **Neovim** - Text editor
+- **AutoHotkey** - Keyboard shortcuts and automation
+- **Taskbar Hider** - Minimal desktop experience
+- **Rainmeter** - With custom Python Gmail unread notifier
+
+## Setup
+- Configuration files are symlinked for better git management
+- PowerShell profile with symlink
+- Neovim config with symlink
+- AHK scripts and window_manager.exe run at Windows startup
+
+## Features
+- Custom AutoHotkey script for on-the-fly window resizing (automating this is endgame)
