@@ -22,6 +22,13 @@ This repository contains configuration files for customizing Windows with a mini
 - PowerShell profile with symlink
 - Neovim config with symlink
 - AHK scripts and window_manager.exe run at Windows startup
+- window_manager.py is currently brute force but is manageable
 
 ## Features
-- Custom AutoHotkey script for on-the-fly window resizing (automating this is endgame)
+- Custom AutoHotkey script for on-the-fly window resizing
+
+- Automated resizing of preselected windows.
+
+- Goal is to have predefined layouts so that certain window environment can be created and it looks same every time.
+
+- wezterm could be utilized better
