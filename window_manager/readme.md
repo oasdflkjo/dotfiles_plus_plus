@@ -49,6 +49,25 @@ for general use needs a way to handle windows zoom level...
 now windows reports actaul screen size / 1.25...
 
 
+so game plan prolly is to make a software that catches all the windows and makes a datastructure of them
+
+then tranform that datastructure into a json with current postition values
+
+then our resizer layer just reads that json does resizing
+
+and finally our window manager app applys the json valuew to windows
+
+this will be quite clean and they have common datastructure that can be the interface
+
+there should be some kind of designer more that allows to make layouts and json could choose predefined positions
+
+goal is to do this only with python and minimal dependencies but still efficient enough
+
+
+
+
+
+
 
 
 
