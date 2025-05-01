@@ -103,6 +103,12 @@ WINDOW_SETTINGS = {
         "width": DEFAULT_WINDOW_WIDTH,
         "height": DEFAULT_WINDOW_HEIGHT,
     },
+    "Spotify": {
+        "x": DEFAULT_WINDOW_X + 6,
+        "y": DEFAULT_WINDOW_Y,
+        "width": DEFAULT_WINDOW_WIDTH - 14,
+        "height": DEFAULT_WINDOW_HEIGHT - 7,
+    },
     "Zen": {
         "x": DEFAULT_WINDOW_X,
         "y": DEFAULT_WINDOW_Y,
@@ -112,8 +118,8 @@ WINDOW_SETTINGS = {
     "VSCode": {
         "x": DEFAULT_WINDOW_X + 6,
         "y": DEFAULT_WINDOW_Y,
-        "width": DEFAULT_WINDOW_WIDTH,
-        "height": DEFAULT_WINDOW_HEIGHT,
+        "width": DEFAULT_WINDOW_WIDTH - 14,
+        "height": DEFAULT_WINDOW_HEIGHT - 7,
     },
 }
 
@@ -127,8 +133,12 @@ SAFE_APP_CLASSES = {
     "Discord": "Discord",
     "SDL_app": "Steam",  # Steam window class
     "CabinetWClass": "Explorer",  # Windows File Explorer
-    "org.wezfurlong.wezterm": "WezTerm",  # Actual WezTerm window class
     "Chrome_WidgetWin_0": "VSCode",  # VS Code main window class
+    "org.wezfurlong.wezterm": "WezTerm",  # Actual WezTerm window class
+    "SpotifyMainWindow": "Spotify",  # Spotify main window
+    "Chrome_WidgetWin_2": "Spotify",  # Alternative Spotify window class
+    "Spotify": "Spotify",  # Direct Spotify class name
+    "SpotifyElectron": "Spotify",  # Electron-based Spotify
 }
 
 # Dictionary mapping alternative titles to our application names
@@ -148,6 +158,8 @@ TITLE_MAPPINGS = {
     "explorer": "Explorer",  # Match Explorer in window title
     "file explorer": "Explorer",  # Alternative Explorer name
     "this pc": "Explorer",  # Common Explorer window title
+    "spotify": "Spotify",  # Match Spotify in window title
+    "spotify premium": "Spotify",  # Alternative Spotify title
 }
 
 # System window classes to ignore
@@ -184,6 +196,9 @@ def force_resize_all_windows():
     foreground_title = win32gui.GetWindowText(foreground_hwnd)
     foreground_class = get_window_class(foreground_hwnd)
 
+    # Run the debug first to find all windows including Spotify
+    debug_log_all_windows()
+
     # Process the foreground window first if it's a target app
     if foreground_hwnd and foreground_title:
         target_app = get_target_app(foreground_title, foreground_class)
@@ -216,6 +231,38 @@ def force_resize_all_windows():
 
             position_window(foreground_hwnd, foreground_title, foreground_class)
 
+    # Special handling for Spotify - look for it specifically
+    def find_spotify_windows():
+        spotify_windows = []
+
+        def enum_spotify_callback(hwnd, _):
+            if not win32gui.IsWindowVisible(hwnd):
+                return True
+
+            window_title = win32gui.GetWindowText(hwnd)
+            if not window_title:
+                return True
+
+            window_class = get_window_class(hwnd)
+
+            # Check for Spotify in title or class
+            if "spotify" in window_title.lower() or "spotify" in window_class.lower():
+                spotify_windows.append((hwnd, window_title, window_class))
+
+            return True
+
+        win32gui.EnumWindows(enum_spotify_callback, None)
+        return spotify_windows
+
+    # Find and process all Spotify windows
+    spotify_windows = find_spotify_windows()
+    if spotify_windows:
+        logger.info(f"Found {len(spotify_windows)} Spotify windows to process")
+        for hwnd, title, class_name in spotify_windows:
+            logger.info(f"Processing Spotify window: '{title}' (Class: {class_name})")
+            position_window(hwnd, title, class_name)
+
+    # Process all other windows
     def enum_callback(hwnd, _):
         # Skip the foreground window as we've already processed it
         if hwnd == foreground_hwnd:
@@ -274,8 +321,43 @@ def is_system_window(hwnd, window_class):
     return False
 
 
+# Add a special debug function to log all windows for diagnostics
+def debug_log_all_windows():
+    """Log all visible windows to help with debugging."""
+    logger.info("===== DEBUG: Logging all visible windows =====")
+
+    def enum_callback(hwnd, _):
+        if win32gui.IsWindowVisible(hwnd):
+            title = win32gui.GetWindowText(hwnd)
+            if title:  # Skip empty titles
+                window_class = get_window_class(hwnd)
+                rect = win32gui.GetWindowRect(hwnd)
+                x, y, right, bottom = rect
+                width = right - x
+                height = bottom - y
+
+                # Log Spotify-related windows with extra detail
+                if "spotify" in title.lower() or "spotify" in window_class.lower():
+                    logger.info(f"SPOTIFY WINDOW FOUND - Title: '{title}'")
+                    logger.info(f"  Class: {window_class}")
+                    logger.info(f"  Position: ({x},{y}) Size: {width}x{height}")
+                    logger.info(f"  Process: {get_window_process_name(hwnd)}")
+
+        return True
+
+    win32gui.EnumWindows(enum_callback, None)
+    logger.info("===== DEBUG: End window logging =====")
+
+
+# Update get_target_app to better handle Spotify
 def get_target_app(window_title, window_class):
     """Determine which target application this window belongs to."""
+    # Special logging for Spotify windows to help with debugging
+    if "spotify" in window_title.lower() or "spotify" in window_class.lower():
+        logger.info(
+            f"Checking window - Title: '{window_title}', Class: '{window_class}'"
+        )
+
     # First try by exact class match (most reliable)
     if window_class in SAFE_APP_CLASSES:
         app = SAFE_APP_CLASSES[window_class]
@@ -289,6 +371,18 @@ def get_target_app(window_title, window_class):
                 app = "Cursor"
             elif "visual studio code" in title_lower:
                 app = "VSCode"
+            elif (
+                "spotify" in title_lower
+            ):  # Also check for Spotify in Chrome_WidgetWin_1
+                return "Spotify"
+
+        # Special handling for Chrome_WidgetWin_2 - could be Spotify
+        if (
+            window_class == "Chrome_WidgetWin_2"
+            and "spotify" not in window_title.lower()
+        ):
+            # Only assume Chrome_WidgetWin_2 is Spotify if it has Spotify in the title
+            return None
 
         # Special handling for SDL_app - confirm it's Steam
         if window_class == "SDL_app" and "steam" not in window_title.lower():
@@ -308,8 +402,18 @@ def get_target_app(window_title, window_class):
         logger.info(f"Notepad detected with class: {window_class}")
         return "Notepad"
 
-    # Then try by title
+    # Check for Spotify based on window title
     title_lower = window_title.lower()
+    if "spotify" in title_lower:
+        logger.info(f"Spotify detected by title: '{window_title}'")
+        return "Spotify"
+
+    # Check for Spotify by window class (partial match)
+    if "spotify" in window_class.lower():
+        logger.info(f"Spotify detected by class: '{window_class}'")
+        return "Spotify"
+
+    # Then try by title
     for key, app in TITLE_MAPPINGS.items():
         if key in title_lower:
             return app
@@ -360,6 +464,18 @@ def position_window(hwnd, window_title, window_class):
         # Only log process info once to reduce spam
         logger.info(f"  Process: {get_window_process_name(hwnd)}")
 
+    # Log Spotify window detection
+    if "Spotify" in window_title or "spotify" in window_class.lower():
+        logger.info(f"Spotify window found - Title: '{window_title}'")
+        logger.info(f"  Class: {window_class}")
+        logger.info(f"  Process: {get_window_process_name(hwnd)}")
+        logger.info(f"  Resolved to app: {target_app}")
+
+    # Enforce "Spotify" app type for anything with spotify in title/class
+    if "spotify" in window_title.lower() or "spotify" in window_class.lower():
+        target_app = "Spotify"
+        logger.info(f"Enforcing app type 'Spotify' for window: '{window_title}'")
+
     if not target_app or target_app not in WINDOW_SETTINGS:
         return
 
@@ -370,8 +486,10 @@ def position_window(hwnd, window_title, window_class):
     current_height = current_bottom - current_y
 
     # Skip special windows that are very small or positioned far off-screen
+    # For Spotify, be more lenient with the size checks
+    is_spotify = target_app == "Spotify"
     if (
-        (current_width < 200 and current_height < 50)
+        ((current_width < 200 and current_height < 50) and not is_spotify)
         or current_x < -1000
         or current_y < -1000
     ):
@@ -421,9 +539,46 @@ def position_window(hwnd, window_title, window_class):
                     hwnd, win32con.GWL_STYLE, current_style | win32con.WS_THICKFRAME
                 )
 
-        # Set the position
-        logger.info(f"Moving window to ({x},{y}) with size {width}x{height}")
-        win32gui.MoveWindow(hwnd, x, y, width, height, True)
+        # For Spotify, ensure it has the right style bits for resizing
+        if target_app == "Spotify":
+            # Make sure Spotify window has the necessary style bits
+            current_style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+            needed_styles = win32con.WS_THICKFRAME | win32con.WS_SIZEBOX
+            if not (current_style & needed_styles):
+                logger.info(f"Adding sizing styles to Spotify window")
+                win32gui.SetWindowLong(
+                    hwnd, win32con.GWL_STYLE, current_style | needed_styles
+                )
+
+            # Try multiple resize attempts for Spotify
+            for attempt in range(3):
+                # Set the position
+                logger.info(
+                    f"Spotify resize attempt {attempt+1} - Moving window to ({x},{y}) with size {width}x{height}"
+                )
+                win32gui.MoveWindow(hwnd, x, y, width, height, True)
+                time.sleep(0.1)  # Give it time to resize
+
+                # Check if it worked
+                new_rect = win32gui.GetWindowRect(hwnd)
+                new_x, new_y, new_right, new_bottom = new_rect
+                new_width = new_right - new_x
+                new_height = new_bottom - new_y
+
+                # If it worked reasonably well, break the loop
+                if abs(new_width - width) < 30 and abs(new_height - height) < 30:
+                    logger.info(
+                        f"Spotify window successfully resized on attempt {attempt+1}"
+                    )
+                    break
+
+                logger.warning(
+                    f"Spotify resize attempt {attempt+1} failed: Size {new_width}x{new_height}"
+                )
+        else:
+            # Set the position for non-Spotify windows
+            logger.info(f"Moving window to ({x},{y}) with size {width}x{height}")
+            win32gui.MoveWindow(hwnd, x, y, width, height, True)
 
         # Get the new window rect to verify it worked
         new_rect = win32gui.GetWindowRect(hwnd)
@@ -456,12 +611,14 @@ def monitor_windows():
 
     # Track last log time for Explorer windows to reduce spam
     last_explorer_log_time = 0
+    last_spotify_log_time = 0
 
     while running:
         try:
-            # Rate limit Explorer logging - no more than once every 5 seconds
+            # Rate limit Explorer and Spotify logging - no more than once every 5 seconds
             current_time = time.time()
             should_log_explorer = (current_time - last_explorer_log_time) > 5
+            should_log_spotify = (current_time - last_spotify_log_time) > 5
 
             def enum_callback(hwnd, new_windows):
                 # Skip invisible windows
@@ -481,10 +638,14 @@ def monitor_windows():
 
                 # Add to new_windows if it's a target app
                 if target_app and target_app in WINDOW_SETTINGS:
-                    # For Explorer windows, only include if we should log them
+                    # Rate limit certain apps to avoid spam
                     if (
                         target_app != "Explorer"
                         or should_log_explorer
+                        or hwnd not in known_windows
+                    ) and (
+                        target_app != "Spotify"
+                        or should_log_spotify
                         or hwnd not in known_windows
                     ):
                         new_windows.append(
@@ -498,14 +659,21 @@ def monitor_windows():
 
             # Process any new windows
             explorer_processed = False
+            spotify_processed = False
 
             for hwnd, title, class_name, app_name in new_windows:
-                # Skip Explorer windows after processing one to avoid spam
+                # Skip Explorer/Spotify windows after processing one to avoid spam
                 if app_name == "Explorer":
                     if explorer_processed:
                         continue
                     explorer_processed = True
                     last_explorer_log_time = current_time
+
+                if app_name == "Spotify":
+                    if spotify_processed:
+                        continue
+                    spotify_processed = True
+                    last_spotify_log_time = current_time
 
                 if hwnd not in known_windows:
                     logger.info(
@@ -543,6 +711,9 @@ def main():
             logger.info(
                 f"  {app}: Position ({settings['x']},{settings['y']}) Size {settings['width']}x{settings['height']}"
             )
+
+        # Run initial debug logging to help with window detection
+        debug_log_all_windows()
 
         # Run an initial resize of all windows
         force_resize_all_windows()

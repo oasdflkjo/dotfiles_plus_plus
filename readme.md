@@ -1,6 +1,7 @@
 # Windows Ricing Configuration
 
-![Desktop Screenshot](image.png)
+![Desktop Screenshot](image1.png)
+![Desktop Screenshot](image2.png)
 
 ## Overview
 This repository contains configuration files for customizing Windows with a minimal and efficient setup.

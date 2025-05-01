@@ -30,4 +30,25 @@ if i want to open chrome i do win and type ch<tab> enter and chrome opens
 that is quite simple 
 
 
+TODO:
+
+1.
+psutil.Process(pid).name() use this to identify windows...
+
+2.
+{
+  "Chrome": {"x": 100, "y": 100, "width": 800, "height": 600},
+  ...
+}
+
+3. 
+automatically detect new windows and add them to the json
+
+4.
+for general use needs a way to handle windows zoom level...
+now windows reports actaul screen size / 1.25...
+
+
+
+
 
