@@ -3,7 +3,12 @@
 #
 # winget install fzf
 # winget install Neovim.Neovim
-
+#
+#  symlink to make this work with git
+# New-Item -ItemType SymbolicLink -Path "C:\Users\petri\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Target "C:\Users\petri\.config\ps\Microsoft.PowerShell_profile.ps1"
+# 
+#
+#
 # Paths
 $WEZTERM_LUA_PATH = "C:\Users\petri\.config\wezterm\"
 $NVIM_LUA_PATH    = "C:\Users\petri\AppData\Local\nvim\"
