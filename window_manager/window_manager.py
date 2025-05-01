@@ -97,6 +97,12 @@ WINDOW_SETTINGS = {
         "width": DEFAULT_WINDOW_WIDTH - 14,
         "height": DEFAULT_WINDOW_HEIGHT - 7,
     },
+    "Explorer": {
+        "x": DEFAULT_WINDOW_X,
+        "y": DEFAULT_WINDOW_Y,
+        "width": DEFAULT_WINDOW_WIDTH,
+        "height": DEFAULT_WINDOW_HEIGHT,
+    },
     "Zen": {
         "x": DEFAULT_WINDOW_X,
         "y": DEFAULT_WINDOW_Y,
@@ -120,6 +126,7 @@ SAFE_APP_CLASSES = {
     "NotepadWindowClass": "Notepad",  # Alternative Notepad class
     "Discord": "Discord",
     "SDL_app": "Steam",  # Steam window class
+    "CabinetWClass": "Explorer",  # Windows File Explorer
     "org.wezfurlong.wezterm": "WezTerm",  # Actual WezTerm window class
     "Chrome_WidgetWin_0": "VSCode",  # VS Code main window class
 }
@@ -138,6 +145,9 @@ TITLE_MAPPINGS = {
     "vs code": "VSCode",
     "vscode": "VSCode",
     "steam": "Steam",  # Match Steam in window title
+    "explorer": "Explorer",  # Match Explorer in window title
+    "file explorer": "Explorer",  # Alternative Explorer name
+    "this pc": "Explorer",  # Common Explorer window title
 }
 
 # System window classes to ignore
@@ -287,6 +297,10 @@ def get_target_app(window_title, window_class):
                 f"SDL_app window found: '{window_title}', checking if it's Steam"
             )
 
+        # No need for excessive logging here - just return the app for CabinetWClass
+        if window_class == "CabinetWClass":
+            return "Explorer"
+
         return app
 
     # Special handling for Notepad - match both by class and window title
@@ -340,6 +354,12 @@ def position_window(hwnd, window_title, window_class):
         logger.info(f"  Process: {get_window_process_name(hwnd)}")
         logger.info(f"  Resolved to app: {target_app}")
 
+    # Log Explorer window detection - only once when first detected
+    if window_class == "CabinetWClass" and hwnd not in processed_windows:
+        logger.info(f"New Explorer window found - Title: '{window_title}'")
+        # Only log process info once to reduce spam
+        logger.info(f"  Process: {get_window_process_name(hwnd)}")
+
     if not target_app or target_app not in WINDOW_SETTINGS:
         return
 
@@ -367,13 +387,14 @@ def position_window(hwnd, window_title, window_class):
         # Get the process name for debugging
         process_info = get_window_process_name(hwnd)
 
-        # Log detailed window info for debugging
-        logger.info(f"Window info before resize:")
-        logger.info(f"  Title: {window_title}")
-        logger.info(f"  Class: {window_class}")
-        logger.info(f"  Process: {process_info}")
-        logger.info(f"  Position: X={current_x}, Y={current_y}")
-        logger.info(f"  Size: Width={current_width}, Height={current_height}")
+        # Log detailed window info for debugging - skip for Explorer to reduce spam
+        if target_app != "Explorer":
+            logger.info(f"Window info before resize:")
+            logger.info(f"  Title: {window_title}")
+            logger.info(f"  Class: {window_class}")
+            logger.info(f"  Process: {process_info}")
+            logger.info(f"  Position: X={current_x}, Y={current_y}")
+            logger.info(f"  Size: Width={current_width}, Height={current_height}")
 
         # Get the settings for this app
         settings = WINDOW_SETTINGS[target_app]
@@ -433,8 +454,14 @@ def monitor_windows():
     # Track known windows
     known_windows = {}
 
+    # Track last log time for Explorer windows to reduce spam
+    last_explorer_log_time = 0
+
     while running:
         try:
+            # Rate limit Explorer logging - no more than once every 5 seconds
+            current_time = time.time()
+            should_log_explorer = (current_time - last_explorer_log_time) > 5
 
             def enum_callback(hwnd, new_windows):
                 # Skip invisible windows
@@ -451,8 +478,18 @@ def monitor_windows():
 
                 # Check if this is one of our target applications
                 target_app = get_target_app(window_title, window_class)
+
+                # Add to new_windows if it's a target app
                 if target_app and target_app in WINDOW_SETTINGS:
-                    new_windows.append((hwnd, window_title, window_class))
+                    # For Explorer windows, only include if we should log them
+                    if (
+                        target_app != "Explorer"
+                        or should_log_explorer
+                        or hwnd not in known_windows
+                    ):
+                        new_windows.append(
+                            (hwnd, window_title, window_class, target_app)
+                        )
 
                 return True
 
@@ -460,9 +497,17 @@ def monitor_windows():
             win32gui.EnumWindows(enum_callback, new_windows)
 
             # Process any new windows
-            for hwnd, title, class_name in new_windows:
+            explorer_processed = False
+
+            for hwnd, title, class_name, app_name in new_windows:
+                # Skip Explorer windows after processing one to avoid spam
+                if app_name == "Explorer":
+                    if explorer_processed:
+                        continue
+                    explorer_processed = True
+                    last_explorer_log_time = current_time
+
                 if hwnd not in known_windows:
-                    app_name = get_target_app(title, class_name)
                     logger.info(
                         f"New {app_name} window detected: '{title}' (Class: {class_name})"
                     )

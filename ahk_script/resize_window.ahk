@@ -73,6 +73,7 @@ return
     WinGetClass, class, A
     WinGet, process, ProcessName, A
     WinGetTitle, title, A
-    MsgBox, Window Class: %class%`nProcess: %process%`nTitle: %title%
+    WinGetPos, x, y, width, height, A
+    MsgBox, Window Class: %class%`nProcess: %process%`nTitle: %title%`nPosition: X=%x%, Y=%y%`nSize: Width=%width%, Height=%height%
 }
 return
