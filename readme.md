@@ -35,7 +35,8 @@ This repository contains configuration files for customizing Windows with a mini
 
 ## General tips for WIN11 (mandatory ;))
 
-1.
 search files
+
 https://www.voidtools.com/
+
 everything and es-cli
