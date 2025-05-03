@@ -7,9 +7,14 @@ from ctypes import wintypes
 import json
 import os
 import time
+import sys
 
 # Import window identification module
 from window_identification import identify_window
+
+print("→ sys.executable:", sys.executable)
+print("→ script __file__:", os.path.abspath(__file__))
+print("→ cwd:", os.getcwd())
 
 # Configuration files
 ZONES_FILE = "zones.json"

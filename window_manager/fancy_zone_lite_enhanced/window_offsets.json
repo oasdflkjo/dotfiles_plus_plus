@@ -23,7 +23,7 @@
     },
     {
       "id": "cursor_app",
-      "x_offset": 7,
+      "x_offset": 6,
       "y_offset": 0,
       "width_offset": -12,
       "height_offset": -7
@@ -68,7 +68,7 @@
       "x_offset": 6,
       "y_offset": 0,
       "width_offset": -12,
-      "height_offset": -7
+      "height_offset": -6
     },
     {
       "id": "unknown_app",
