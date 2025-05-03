@@ -48,7 +48,7 @@ config.colors = {
   },
 }
 
--- config.window_decorations = "RESIZE" -- enable drag
+config.window_decorations = "RESIZE" -- enable drag
 config.window_padding = {
   left = 5, right = 0, top = 8, bottom = 0,
 }
