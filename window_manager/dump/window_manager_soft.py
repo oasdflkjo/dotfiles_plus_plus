@@ -19,10 +19,17 @@ logger = logging.getLogger("WindowPositioner")
 
 # List of known UWP app patterns
 UWP_CLASSES = [
-    "Windows.UI.Core.CoreWindow",
-    "ApplicationFrameWindow",
-    "Windows.UI.Core",
+    "Windows.UI.Core.CoreWindow",  # The actual UWP app window
+    "ApplicationFrameWindow",  # The UWP container window
 ]
+
+# UWP Apps we want to prioritize by their specific core window
+UWP_APP_PREFERENCES = {
+    "Calculator": "CalculatorApp|ApplicationFrameWindow",  # Only use ApplicationFrameWindow for Calculator
+    "Photos": "PhotosApp|Windows.UI.Core.CoreWindow",
+    "Settings": "SettingsApp|Windows.UI.Core.CoreWindow",
+    # Add more specific UWP apps here
+}
 
 
 class WindowPositioner:
@@ -54,6 +61,11 @@ class WindowPositioner:
         if self.legacy_config_path.exists():
             self.load_legacy_config()
 
+        # Store UWP app tracking
+        self.uwp_window_map = (
+            {}
+        )  # Map of UWP container windows to their specific windows
+
         logger.info("Window positioner initialized")
 
     def load_legacy_config(self):
@@ -77,6 +89,9 @@ class WindowPositioner:
         # Reload legacy config if it exists
         if self.legacy_config_path.exists():
             self.load_legacy_config()
+
+        # Clear UWP window map
+        self.uwp_window_map = {}
 
         logger.info("Configuration reloaded")
         return True
@@ -108,9 +123,30 @@ class WindowPositioner:
             # Check if this is a UWP app
             if any(uwp_class in window_class for uwp_class in UWP_CLASSES):
                 is_uwp = True
-                # For UWP apps, try to extract the app name from the title or use a pattern-based approach
+
+                # Skip ApplicationFrameWindow for apps we know better windows for
+                if window_class == "ApplicationFrameWindow":
+                    # Check if this is a known app from the title
+                    for app_name, preferred_key in UWP_APP_PREFERENCES.items():
+                        if app_name in window_title:
+                            # Skip this container window and prefer the CoreWindow
+                            return {
+                                "process_name": app_name.replace(" ", "") + "App",
+                                "window_class": window_class,
+                                "title": window_title,
+                                "rect": win32gui.GetWindowRect(hwnd),
+                                "hwnd": hwnd,
+                                "is_uwp": is_uwp,
+                                "skip_positioning": True,  # Flag to skip this window
+                            }
+
+                # For UWP apps, try to extract the app name from the title
                 if "Calculator" in window_title:
                     process_name = "CalculatorApp"
+                elif "Photos" in window_title:
+                    process_name = "PhotosApp"
+                elif "Settings" in window_title:
+                    process_name = "SettingsApp"
                 else:
                     # Try to get the actual process name
                     try:
@@ -122,12 +158,14 @@ class WindowPositioner:
                             # Extract app name from window title (e.g., "Calculator")
                             app_name = re.match(r"^([^\-\–]+)", window_title)
                             if app_name:
-                                process_name = app_name.group(1).strip() + "App"
+                                process_name = (
+                                    app_name.group(1).strip().replace(" ", "") + "App"
+                                )
                             else:
                                 process_name = "UnknownUWPApp"
                     except:
                         # Fallback to a generic name based on title
-                        process_name = window_title.split()[0] + "App"
+                        process_name = window_title.split()[0].replace(" ", "") + "App"
             else:
                 # Standard Win32 app
                 try:
@@ -166,6 +204,28 @@ class WindowPositioner:
         if not process_name or not window_class:
             return False
 
+        # Special handling for Calculator - only manage ApplicationFrameWindow
+        if process_name == "CalculatorApp":
+            if window_class == "ApplicationFrameWindow":
+                logger.info(
+                    f"Explicitly managing Calculator window ({process_name}|{window_class})"
+                )
+                return True
+            else:
+                # Skip any other Calculator windows
+                return False
+
+        # Skip ApplicationFrameWindow when a specific UWP app is configured
+        if window_class == "ApplicationFrameWindow":
+            for _, preferred_key in UWP_APP_PREFERENCES.items():
+                if (
+                    preferred_key in self.window_zones.window_layouts
+                    or preferred_key in self.window_zones.adjustments
+                ):
+                    # Skip container if we have config for the specific app
+                    if process_name + "|" + window_class in preferred_key:
+                        return False
+
         # Create window key in format used by window_zones
         window_key = f"{process_name}|{window_class}"
 
@@ -175,10 +235,6 @@ class WindowPositioner:
 
         # Check if this window has a layout selected
         if window_key in self.window_zones.window_layouts:
-            return True
-
-        # Check if this window has a custom position
-        if window_key in self.window_zones.custom_positions:
             return True
 
         # Legacy support
@@ -201,6 +257,48 @@ class WindowPositioner:
 
         return False
 
+    def position_uwp_window(self, hwnd, x, y, width, height):
+        """
+        Use special flags and techniques for UWP windows
+
+        Returns:
+            Boolean indicating success
+        """
+        try:
+            # Set specific flags for UWP positioning
+            flags = win32con.SWP_SHOWWINDOW | win32con.SWP_ASYNCWINDOWPOS
+
+            # Position the window
+            result = win32gui.SetWindowPos(
+                hwnd,
+                win32con.HWND_TOP,  # Put window at the top of the Z order
+                x,
+                y,
+                width,
+                height,
+                flags,
+            )
+
+            # Force window to update and redraw
+            win32gui.UpdateWindow(hwnd)
+            win32gui.RedrawWindow(
+                hwnd,
+                None,
+                None,
+                win32con.RDW_INVALIDATE
+                | win32con.RDW_ERASE
+                | win32con.RDW_FRAME
+                | win32con.RDW_ALLCHILDREN,
+            )
+
+            # Try to activate the window to ensure it takes the new position
+            win32gui.SetForegroundWindow(hwnd)
+
+            return result is not None
+        except Exception as e:
+            logger.error(f"Error in position_uwp_window: {e}")
+            return False
+
     def position_window(self, hwnd, process_name, window_class, force=False):
         """
         Position a window according to its configuration
@@ -221,8 +319,26 @@ class WindowPositioner:
         if hwnd in self.resize_in_progress and self.resize_in_progress[hwnd]:
             return False
 
+        # Special handling for Calculator - always force positioning
+        if process_name == "CalculatorApp" and window_class == "ApplicationFrameWindow":
+            force = True
+            logger.info(f"Forcing position update for Calculator window")
+
         # Create window identifier key
         window_key = f"{process_name}|{window_class}"
+
+        # Special handling for UWP container windows - skip if there's a better target
+        if window_class == "ApplicationFrameWindow" and process_name != "CalculatorApp":
+            for app_name, preferred_key in UWP_APP_PREFERENCES.items():
+                if (
+                    preferred_key in self.window_zones.window_layouts
+                    or preferred_key in self.window_zones.adjustments
+                ):
+                    # Skip this container window and use the specific app window instead
+                    logger.info(
+                        f"Skipping UWP container {window_key} in favor of {preferred_key}"
+                    )
+                    return False
 
         # Check if this is a UWP app
         is_uwp = any(uwp_class in window_class for uwp_class in UWP_CLASSES)
@@ -303,38 +419,22 @@ class WindowPositioner:
                     # Apply the position
                     try:
                         # Set special flags for UWP apps
-                        flags = win32con.SWP_SHOWWINDOW
-
-                        # UWP apps sometimes need special flags
                         if is_uwp:
-                            flags |= win32con.SWP_ASYNCWINDOWPOS
-
-                        result = win32gui.SetWindowPos(
-                            hwnd,
-                            win32con.HWND_TOP,  # Put window at the top of the Z order
-                            x,
-                            y,
-                            width,
-                            height,
-                            flags,
-                        )
-                        logger.debug(f"SetWindowPos result: {result}")
-
-                        # For UWP apps, try to force redraw
-                        if is_uwp:
-                            try:
-                                win32gui.UpdateWindow(hwnd)
-                                win32gui.RedrawWindow(
-                                    hwnd,
-                                    None,
-                                    None,
-                                    win32con.RDW_INVALIDATE
-                                    | win32con.RDW_ERASE
-                                    | win32con.RDW_FRAME
-                                    | win32con.RDW_ALLCHILDREN,
-                                )
-                            except Exception as e:
-                                logger.warning(f"Failed to force redraw: {e}")
+                            # Use our special UWP positioning function
+                            self.position_uwp_window(hwnd, x, y, width, height)
+                        else:
+                            # Standard Win32 window positioning
+                            flags = win32con.SWP_SHOWWINDOW
+                            result = win32gui.SetWindowPos(
+                                hwnd,
+                                win32con.HWND_TOP,  # Put window at the top of the Z order
+                                x,
+                                y,
+                                width,
+                                height,
+                                flags,
+                            )
+                            logger.debug(f"SetWindowPos result: {result}")
                     except Exception as e:
                         logger.error(f"Failed to position window: {e}")
                         self.resize_in_progress[hwnd] = False
@@ -386,21 +486,21 @@ class WindowPositioner:
 
                     # Apply the position
                     try:
-                        flags = win32con.SWP_SHOWWINDOW
-
-                        # UWP apps sometimes need special flags
                         if is_uwp:
-                            flags |= win32con.SWP_ASYNCWINDOWPOS
-
-                        win32gui.SetWindowPos(
-                            hwnd,
-                            win32con.HWND_TOP,
-                            x,
-                            y,
-                            width,
-                            height,
-                            flags,
-                        )
+                            # Use our special UWP positioning function
+                            self.position_uwp_window(hwnd, x, y, width, height)
+                        else:
+                            # Standard Win32 window positioning
+                            flags = win32con.SWP_SHOWWINDOW
+                            win32gui.SetWindowPos(
+                                hwnd,
+                                win32con.HWND_TOP,
+                                x,
+                                y,
+                                width,
+                                height,
+                                flags,
+                            )
                     except Exception as e:
                         logger.error(f"Failed to position window: {e}")
                         self.resize_in_progress[hwnd] = False
@@ -445,6 +545,10 @@ class WindowPositioner:
             if not info:
                 return False
 
+            # Skip if explicitly flagged to skip (replacement UWP window)
+            if info.get("skip_positioning", False):
+                return False
+
             # Check if we should manage this window
             process_name = info["process_name"]
             window_class = info["window_class"]
@@ -478,8 +582,40 @@ class WindowPositioner:
                 return True
 
             try:
-                if self.position_window_by_handle(hwnd):
-                    positioned_count += 1
+                info = self.get_window_info(hwnd)
+                if not info:
+                    return True
+
+                # Always try to position Calculator windows with ApplicationFrameWindow class
+                if (
+                    info["process_name"] == "CalculatorApp"
+                    and info["window_class"] == "ApplicationFrameWindow"
+                ):
+                    logger.info(f"Found Calculator window - attempting to position it")
+                    if self.position_window(
+                        hwnd, info["process_name"], info["window_class"], force=True
+                    ):
+                        positioned_count += 1
+                    return True
+
+                # Skip non-relevant CoreWindow for Calculator
+                if (
+                    info["process_name"] == "CalculatorApp"
+                    and info["window_class"] == "Windows.UI.Core.CoreWindow"
+                ):
+                    logger.info(
+                        f"Skipping Calculator CoreWindow - not needed for positioning"
+                    )
+                    return True
+
+                # For other windows, use normal logic
+                if not info.get(
+                    "skip_positioning", False
+                ) and self.should_manage_window(
+                    info["process_name"], info["window_class"]
+                ):
+                    if self.position_window_by_handle(hwnd):
+                        positioned_count += 1
             except Exception as e:
                 logger.error(f"Error in enum_callback: {e}")
 
@@ -501,6 +637,7 @@ class WindowPositioner:
             List of window info dictionaries for manageable windows
         """
         managed_windows = []
+        all_windows = []
 
         def enum_callback(hwnd, _):
             # Skip invisible or minimized windows
@@ -513,7 +650,18 @@ class WindowPositioner:
 
             try:
                 info = self.get_window_info(hwnd)
-                if info and self.should_manage_window(
+                if not info:
+                    return True
+
+                # Save all windows for debugging
+                all_windows.append(info)
+
+                # Skip if explicitly flagged to skip
+                if info.get("skip_positioning", False):
+                    return True
+
+                # Check if this should be managed
+                if self.should_manage_window(
                     info["process_name"], info["window_class"]
                 ):
                     managed_windows.append(info)
@@ -526,6 +674,41 @@ class WindowPositioner:
             win32gui.EnumWindows(enum_callback, None)
         except Exception as e:
             logger.error(f"Error in EnumWindows: {e}")
+
+        # Debug output for Calculator windows
+        calculator_windows = [
+            w
+            for w in all_windows
+            if "Calculator" in w.get("title", "")
+            or "Calculator" in w.get("process_name", "")
+        ]
+        if calculator_windows:
+            logger.info(f"Found {len(calculator_windows)} Calculator windows:")
+            for calc in calculator_windows:
+                is_managed = any(m["hwnd"] == calc["hwnd"] for m in managed_windows)
+                managed_str = "MANAGED" if is_managed else "NOT MANAGED"
+                logger.info(
+                    f"  - {calc['process_name']} | {calc['window_class']} - '{calc['title']}' ({managed_str})"
+                )
+
+                # Check why it's not managed
+                if not is_managed:
+                    window_key = f"{calc['process_name']}|{calc['window_class']}"
+                    logger.info(f"    Key: {window_key}")
+                    logger.info(
+                        f"    In adjustments? {window_key in self.window_zones.adjustments}"
+                    )
+                    logger.info(
+                        f"    In window_layouts? {window_key in self.window_zones.window_layouts}"
+                    )
+
+                    # Try to manage it if it has a layout
+                    if (
+                        calc["process_name"] == "CalculatorApp"
+                        and calc["window_class"] == "ApplicationFrameWindow"
+                    ):
+                        logger.info(f"    Forcing management of Calculator window")
+                        managed_windows.append(calc)
 
         return managed_windows
 
