@@ -21,7 +21,7 @@ This repository contains configuration files for customizing Windows with a mini
 - Configuration files are symlinked for better git management
 - PowerShell profile with symlink
 - Neovim config with symlink
-- AHK scripts and window_manager.exe run at Windows startup
+- Scripts Windows startup
 - window_manager.py is currently brute force but is manageable
 
 ## Features
