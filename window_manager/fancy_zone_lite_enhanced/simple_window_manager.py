@@ -15,6 +15,14 @@ from window_identification import identify_window
 ZONES_FILE = "zones.json"
 OFFSETS_FILE = "window_offsets.json"
 
+# Hotkey constants
+MOD_WIN = 0x0008
+VK_C = 0x43
+HOTKEY_ID_CENTER = 1
+
+# Global variables
+zones = []  # Making zones global so it can be accessed by hotkey handlers
+
 
 class Zone:
     def __init__(self, name, x, y, width, height, description=""):
@@ -246,30 +254,45 @@ def is_mouse_button_pressed():
 
 
 def move_window_to_zone(hwnd, zone, offsets):
-    """Move and resize window to fit zone with offsets"""
-    if not hwnd or not win32gui.IsWindow(hwnd):
-        return
+    """Move a window to a specific zone with offsets"""
+    try:
+        if not (hwnd and zone):
+            return False
 
-    # Get window info for logging
-    title = win32gui.GetWindowText(hwnd)
-    class_name = win32gui.GetClassName(hwnd)
+        # For fullscreen windows or minimized windows, we'll skip
+        window_style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+        if (
+            not (window_style & win32con.WS_VISIBLE)
+            or window_style & win32con.WS_MINIMIZE
+        ):
+            return False
 
-    # Apply offsets to zone dimensions - with defaults of 0 if keys missing
-    x = zone.x + int(offsets.get("x_offset", 0))
-    y = zone.y + int(offsets.get("y_offset", 0))
-    width = zone.width + int(offsets.get("width_offset", 0))
-    height = zone.height + int(offsets.get("height_offset", 0))
+        # Get current window rect
+        try:
+            rect = win32gui.GetWindowRect(hwnd)
+        except:
+            return False
 
-    # Ensure dimensions are positive
-    width = max(100, width)
-    height = max(100, height)
+        # Apply offsets
+        x = zone.x + offsets.get("x_offset", 0)
+        y = zone.y + offsets.get("y_offset", 0)
+        width = zone.width + offsets.get("width_offset", 0)
+        height = zone.height + offsets.get("height_offset", 0)
 
-    print(f"Moving {title} to zone: {zone.name}")
-
-    # Move window
-    win32gui.SetWindowPos(
-        hwnd, win32con.HWND_TOP, x, y, width, height, win32con.SWP_SHOWWINDOW
-    )
+        # Set window position
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOP,
+            x,
+            y,
+            width,
+            height,
+            win32con.SWP_SHOWWINDOW,
+        )
+        return True
+    except Exception as e:
+        print(f"Error moving window to zone: {e}")
+        return False
 
 
 def save_window_offset(window_id, window_title, offsets_data, zone_used=None):
@@ -337,8 +360,81 @@ def get_window_under_cursor():
     return None
 
 
+def register_hotkeys():
+    """Register the Win+C hotkey for centering active window"""
+    try:
+        # Register Win+C for centering active window
+        result = ctypes.windll.user32.RegisterHotKey(
+            None, HOTKEY_ID_CENTER, MOD_WIN, VK_C
+        )
+        if not result:
+            print("Failed to register Win+C hotkey")
+        else:
+            print("Registered Win+C hotkey for centering active window")
+    except Exception as e:
+        print(f"Error registering hotkeys: {e}")
+
+
+def unregister_hotkeys():
+    """Unregister all hotkeys"""
+    try:
+        ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_CENTER)
+    except:
+        pass
+
+
+def get_active_window():
+    """Get the currently active window handle"""
+    return win32gui.GetForegroundWindow()
+
+
+def center_active_window():
+    """Center the active window using the center zone in the config"""
+    active_hwnd = get_active_window()
+    if not active_hwnd:
+        print("No active window found")
+        return
+
+    # Find the center zone
+    center_zone = None
+    for zone in zones:
+        if zone.name.lower() == "centered" or zone.name.lower() == "center":
+            center_zone = zone
+            break
+
+    if not center_zone:
+        print("No center zone defined in config")
+        return
+
+    # Get window identification for possible offsets
+    window_id = identify_window(active_hwnd)
+
+    # Get window title for logging
+    window_title = win32gui.GetWindowText(active_hwnd)
+
+    # Load offsets
+    offsets_data = load_window_offsets()
+    offsets = find_window_offsets(window_id, offsets_data)
+
+    print(f"Centering window: {window_title}")
+    move_window_to_zone(active_hwnd, center_zone, offsets)
+
+
+def handle_hotkey_message(msg):
+    """Handle a hotkey message"""
+    if msg.message == win32con.WM_HOTKEY:
+        if msg.wParam == HOTKEY_ID_CENTER:
+            # When Win+C is pressed
+            print("Win+C pressed - centering active window")
+            center_active_window()
+            return True
+    return False
+
+
 def main():
     """Main application loop"""
+    global zones
+
     # Load configuration
     zones = load_zones()
     offsets_data = load_window_offsets()
@@ -351,8 +447,12 @@ def main():
     file_check_interval = 1.0
     last_check_time = time.time()
 
+    # Register hotkeys
+    register_hotkeys()
+
     print("Window Manager started")
     print("Use Shift+drag to move windows to zones")
+    print("Press Win+C to center active window")
     print("Configuration files will be auto-reloaded when changed")
     print("Press Ctrl+C to exit")
 
@@ -364,6 +464,19 @@ def main():
 
     try:
         while True:
+            # Check for Windows messages (for hotkeys)
+            msg = wintypes.MSG()
+            if ctypes.windll.user32.PeekMessageA(
+                ctypes.byref(msg), None, 0, 0, 1
+            ):  # PM_REMOVE = 1
+                # If it's a hotkey message, handle it
+                if handle_hotkey_message(msg):
+                    continue  # Message was handled
+
+                # Otherwise, process normal Windows messages
+                ctypes.windll.user32.TranslateMessage(ctypes.byref(msg))
+                ctypes.windll.user32.DispatchMessageA(ctypes.byref(msg))
+
             # Check for config file changes periodically
             current_time = time.time()
             if current_time - last_check_time > file_check_interval:
@@ -458,6 +571,7 @@ def main():
         print("\nExiting...")
     finally:
         destroy_overlay(overlay_hwnd)
+        unregister_hotkeys()
 
 
 if __name__ == "__main__":
