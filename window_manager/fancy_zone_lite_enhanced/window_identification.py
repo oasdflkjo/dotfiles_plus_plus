@@ -4,17 +4,132 @@ import win32con
 import win32process
 import os
 
+# Standardized window definitions
+# Each entry has:
+#   - window_title: Expected window title ('' for any, or a specific string to match)
+#   - class_name: Expected class name ('' for any, or a specific class to match)
+#   - process_name: Expected process name ('' for any, or a specific process to match)
+#   - name: The identifier we want to use for this window type
+WINDOW_DEFINITIONS = [
+    {
+        "window_title": "",
+        "class_name": "",
+        "process_name": "spotify.exe",
+        "name": "spotify_app",
+    },
+    {
+        "window_title": "",
+        "class_name": "",
+        "process_name": "discord.exe",
+        "name": "discord_app",
+    },
+    {
+        "window_title": "",
+        "class_name": "org.wezfurlong.wezterm",
+        "process_name": "wezterm-gui.exe",
+        "name": "wezterm_app",
+    },
+    {
+        "window_title": "MobaXterm",
+        "class_name": "TApplication",
+        "process_name": "mobaxterm.exe",
+        "name": "mobaxterm_app",
+    },
+    {
+        "window_title": "",
+        "class_name": "CASCADIA_HOSTING_WINDOW_CLASS",
+        "process_name": "windowsterminal.exe",
+        "name": "windows_terminal",
+    },
+    {
+        "window_title": "PowerShell",
+        "class_name": "CASCADIA_HOSTING_WINDOW_CLASS",
+        "process_name": "",
+        "name": "powershell_terminal",
+    },
+    {
+        "window_title": "",
+        "class_name": "Notepad",
+        "process_name": "notepad.exe",
+        "name": "notepad",
+    },
+    {
+        "window_title": "Steam",
+        "class_name": "SDL_app",
+        "process_name": "steamwebhelper.exe",
+        "name": "steam_app",
+    },
+    {
+        "window_title": "Google Chrome",
+        "class_name": "Chrome_WidgetWin_1",
+        "process_name": "chrome.exe",
+        "name": "chrome_browser",
+    },
+    {
+        "window_title": "Cursor",
+        "class_name": "Chrome_WidgetWin_1",
+        "process_name": "cursor.exe",
+        "name": "cursor_app",
+    },
+    {
+        "window_title": "Visual Studio Code",
+        "class_name": "Chrome_WidgetWin_1",
+        "process_name": "code.exe",
+        "name": "vscode_app",
+    },
+    {
+        "window_title": "Discord",
+        "class_name": "Chrome_WidgetWin_1",
+        "process_name": "discord.exe",
+        "name": "discord_app",
+    },
+    {
+        "window_title": "Spotify",
+        "class_name": "Chrome_WidgetWin_1",
+        "process_name": "spotify.exe",
+        "name": "spotify_app",
+    },
+]
+
 
 def identify_window(hwnd):
-    """Core function to identify window type reliably"""
+    """Identify a window using the standardized definitions"""
     if not hwnd:
         return None
 
-    title = win32gui.GetWindowText(hwnd)
+    # Get window properties
+    window_title = win32gui.GetWindowText(hwnd)
     class_name = win32gui.GetClassName(hwnd)
+    process_name = get_process_name(hwnd)
 
-    # Get process name when possible, for extra reliability
-    process_name = ""
+    # Try to match against our definitions first
+    for definition in WINDOW_DEFINITIONS:
+        # Skip empty string values - only check non-empty criteria
+
+        # Check process name (only if specified)
+        if definition["process_name"] != "":
+            if definition["process_name"] not in process_name:
+                continue
+
+        # Check class name (only if specified)
+        if definition["class_name"] != "":
+            if definition["class_name"] != class_name:
+                continue
+
+        # Check window title (only if specified) - partial match
+        if definition["window_title"] != "":
+            if definition["window_title"] not in window_title:
+                continue
+
+        # All specified conditions match, use this definition
+        return definition["name"]
+
+    # If no match found in our definitions, return unknown_app
+    return "unknown_app"
+
+
+def get_process_name(hwnd):
+    """Get process name for a window handle"""
     try:
         pid = win32process.GetWindowThreadProcessId(hwnd)[1]
         hProcess = win32api.OpenProcess(
@@ -23,91 +138,9 @@ def identify_window(hwnd):
         if hProcess:
             try:
                 process_path = win32process.GetModuleFileNameEx(hProcess, 0)
-                process_name = os.path.basename(process_path).lower()
+                return os.path.basename(process_path).lower()
             finally:
                 win32api.CloseHandle(hProcess)
     except:
-        process_name = ""
-
-    # If we have process name, use it for more reliable identification
-    if process_name:
-        if "chrome.exe" in process_name or "msedge.exe" in process_name:
-            return "chrome_browser"
-        if "code.exe" in process_name:
-            return "vscode_app"
-        if "cursor.exe" in process_name:
-            return "cursor_app"
-        if "spotify.exe" in process_name:
-            return "spotify_app"
-        if "discord.exe" in process_name:
-            return "discord_app"
-        if "wezterm-gui.exe" in process_name:
-            return "wezterm_app"
-        if "windowsterminal.exe" in process_name:
-            return "windows_terminal"
-        if "notepad.exe" in process_name:
-            return "notepad"
-
-    # Direct class name matching for specific applications
-    if class_name == "org.wezfurlong.wezterm":
-        return "wezterm_terminal"
-
-    if class_name == "CASCADIA_HOSTING_WINDOW_CLASS":
-        # Windows Terminal (includes PowerShell)
-        if "PowerShell" in title:
-            return "powershell_terminal"
-        return "windows_terminal"
-
-    if class_name == "Notepad":
-        return "notepad"
-
-    # Fall back to class+title patterns if process name isn't available
-    if class_name == "Chrome_WidgetWin_1":
-        # Check if it's a browser first - browser always has " - Browser" in title for Chrome
-        if (
-            " - Google Chrome" in title
-            or " - Chrome" in title
-            or " - Microsoft Edge" in title
-        ):
-            return "chrome_browser"
-
-        # Common Electron apps - only if process name check didn't work
-        if "Cursor" in title and "chrome.exe" not in process_name:
-            return "cursor_app"
-        if "Visual Studio Code" in title and "chrome.exe" not in process_name:
-            return "vscode_app"
-        if "Discord" in title and "chrome.exe" not in process_name:
-            return "discord_app"
-        if "Spotify" in title and "chrome.exe" not in process_name:
-            return "spotify_app"
-        if "Teams" in title and "chrome.exe" not in process_name:
-            return "teams_app"
-        if "WhatsApp" in title and "chrome.exe" not in process_name:
-            return "whatsapp_app"
-
-        # If title contains a website name and process is chrome, it's a browser
-        if process_name and (
-            "chrome.exe" in process_name or "msedge.exe" in process_name
-        ):
-            return "chrome_browser"
-
-        # Default for other Electron apps
-        first_word = title.split()[0] if title else "unknown"
-        return f"electron_{first_word.lower()}"
-
-    # UWP/Modern Windows apps
-    elif class_name in ["ApplicationFrameWindow", "Windows.UI.Core.CoreWindow"]:
-        first_word = title.split()[0] if title else "unknown"
-        return f"uwp_{first_word.lower()}"
-
-    # Terminal apps
-    elif (
-        "term" in class_name.lower()
-        or "shell" in class_name.lower()
-        or class_name == "ConsoleWindowClass"
-        or "wezterm" in class_name.lower()
-    ):
-        return f"terminal_{class_name.lower()}"
-
-    # Default to class name
-    return f"{class_name.lower()}"
+        pass
+    return ""

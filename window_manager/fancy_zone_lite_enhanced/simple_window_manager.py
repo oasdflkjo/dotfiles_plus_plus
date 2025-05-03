@@ -395,6 +395,17 @@ def center_active_window():
         print("No active window found")
         return
 
+    # Get window identification for possible offsets
+    window_id = identify_window(active_hwnd)
+
+    # Skip unknown applications - don't process Win+C for unknown_app
+    if window_id == "unknown_app":
+        print("Window not recognized. Please first drop it in a zone manually.")
+        return
+
+    # Get window title for logging
+    window_title = win32gui.GetWindowText(active_hwnd)
+
     # Find the center zone
     center_zone = None
     for zone in zones:
@@ -406,17 +417,11 @@ def center_active_window():
         print("No center zone defined in config")
         return
 
-    # Get window identification for possible offsets
-    window_id = identify_window(active_hwnd)
-
-    # Get window title for logging
-    window_title = win32gui.GetWindowText(active_hwnd)
-
     # Load offsets
     offsets_data = load_window_offsets()
     offsets = find_window_offsets(window_id, offsets_data)
 
-    print(f"Centering window: {window_title}")
+    print(f"Centering window: {window_title} ({window_id})")
     move_window_to_zone(active_hwnd, center_zone, offsets)
 
 
