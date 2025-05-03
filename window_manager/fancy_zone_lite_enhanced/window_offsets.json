@@ -1,0 +1,81 @@
+{
+  "applications": [
+    {
+      "id": "notepad",
+      "x_offset": 0,
+      "y_offset": 0,
+      "width_offset": 0,
+      "height_offset": 0
+    },
+    {
+      "id": "vscode_app",
+      "x_offset": 6,
+      "y_offset": 0,
+      "width_offset": -12,
+      "height_offset": -7
+    },
+    {
+      "id": "chrome_browser",
+      "x_offset": -1,
+      "y_offset": 0,
+      "width_offset": 1,
+      "height_offset": 0
+    },
+    {
+      "id": "cursor_app",
+      "x_offset": 7,
+      "y_offset": 0,
+      "width_offset": -12,
+      "height_offset": -7
+    },
+    {
+      "id": "spotify_app",
+      "x_offset": 6,
+      "y_offset": 0,
+      "width_offset": -12,
+      "height_offset": -6
+    },
+    {
+      "id": "wezterm_app",
+      "x_offset": -1,
+      "y_offset": 0,
+      "width_offset": 1,
+      "height_offset": 0
+    },
+    {
+      "id": "windows_terminal",
+      "x_offset": 0,
+      "y_offset": 0,
+      "width_offset": 0,
+      "height_offset": 0
+    },
+    {
+      "id": "cabinetwclass",
+      "x_offset": 0,
+      "y_offset": 0,
+      "width_offset": 0,
+      "height_offset": 0
+    },
+    {
+      "id": "discord_app",
+      "x_offset": 6,
+      "y_offset": 0,
+      "width_offset": -12,
+      "height_offset": -7
+    },
+    {
+      "id": "everything",
+      "x_offset": 0,
+      "y_offset": 0,
+      "width_offset": 0,
+      "height_offset": 0
+    },
+    {
+      "id": "uwp_sticky",
+      "x_offset": 0,
+      "y_offset": 0,
+      "width_offset": 0,
+      "height_offset": 0
+    }
+  ]
+}

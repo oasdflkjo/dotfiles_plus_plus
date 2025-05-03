@@ -32,3 +32,10 @@ This repository contains configuration files for customizing Windows with a mini
 - Goal is to have predefined layouts so that certain window environment can be created and it looks same every time.
 
 - wezterm could be utilized better
+
+## General tips for WIN11 (mandatory ;))
+
+1.
+search files
+https://www.voidtools.com/
+everything and es-cli
