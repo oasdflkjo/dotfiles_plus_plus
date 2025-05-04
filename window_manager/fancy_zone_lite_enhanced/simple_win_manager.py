@@ -23,10 +23,14 @@ OFFSETS_FILE = "window_offsets.json"
 # Hotkey constants
 MOD_WIN = 0x0008
 VK_C = 0x43
+VK_F12 = 0x7B
 HOTKEY_ID_CENTER = 1
+HOTKEY_ID_TOGGLE_TASKBAR = 2
 
 # Global variables
 zones = []  # Making zones global so it can be accessed by hotkey handlers
+taskbar_hidden = False
+taskbar_window = None
 
 
 class Zone:
@@ -366,7 +370,7 @@ def get_window_under_cursor():
 
 
 def register_hotkeys():
-    """Register the Win+C hotkey for centering active window"""
+    """Register the Win+C hotkey for centering active window and Win+F12 for toggling taskbar"""
     try:
         # Register Win+C for centering active window
         result = ctypes.windll.user32.RegisterHotKey(
@@ -376,6 +380,15 @@ def register_hotkeys():
             print("Failed to register Win+C hotkey")
         else:
             print("Registered Win+C hotkey for centering active window")
+
+        # Register Win+F12 for toggling taskbar
+        result = ctypes.windll.user32.RegisterHotKey(
+            None, HOTKEY_ID_TOGGLE_TASKBAR, MOD_WIN, VK_F12
+        )
+        if not result:
+            print("Failed to register Win+F12 hotkey")
+        else:
+            print("Registered Win+F12 hotkey for toggling taskbar")
     except Exception as e:
         print(f"Error registering hotkeys: {e}")
 
@@ -384,6 +397,7 @@ def unregister_hotkeys():
     """Unregister all hotkeys"""
     try:
         ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_CENTER)
+        ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_TOGGLE_TASKBAR)
     except:
         pass
 
@@ -438,7 +452,47 @@ def handle_hotkey_message(msg):
             print("Win+C pressed - centering active window")
             center_active_window()
             return True
+        elif msg.wParam == HOTKEY_ID_TOGGLE_TASKBAR:
+            # When Win+F12 is pressed
+            print("Win+F12 pressed - toggling taskbar")
+            toggle_taskbar()
+            return True
     return False
+
+
+# Function to toggle taskbar visibility
+def toggle_taskbar():
+    """Toggle the visibility of the Windows taskbar"""
+    global taskbar_hidden, taskbar_window
+
+    # Find taskbar window if not already found
+    if not taskbar_window:
+        taskbar_window = win32gui.FindWindow("Shell_TrayWnd", None)
+        if not taskbar_window:
+            print("Taskbar window not found")
+            return
+
+    # Toggle visibility
+    if taskbar_hidden:
+        win32gui.ShowWindow(taskbar_window, win32con.SW_SHOW)
+        taskbar_hidden = False
+        print("Taskbar shown")
+    else:
+        win32gui.ShowWindow(taskbar_window, win32con.SW_HIDE)
+        taskbar_hidden = True
+        print("Taskbar hidden")
+
+
+# Hide taskbar on startup
+def hide_taskbar_on_startup():
+    """Hide the taskbar when the application starts"""
+    global taskbar_hidden, taskbar_window
+
+    taskbar_window = win32gui.FindWindow("Shell_TrayWnd", None)
+    if taskbar_window:
+        win32gui.ShowWindow(taskbar_window, win32con.SW_HIDE)
+        taskbar_hidden = True
+        print("Taskbar hidden on startup")
 
 
 def main():
@@ -448,6 +502,9 @@ def main():
     # Load configuration
     zones = load_zones()
     offsets_data = load_window_offsets()
+
+    # Hide taskbar on startup
+    hide_taskbar_on_startup()
 
     # Store file modification times for auto-reload
     last_zones_mod_time = get_file_mod_time(ZONES_FILE)
@@ -463,6 +520,7 @@ def main():
     print("Window Manager started")
     print("Use Shift+drag to move windows to zones")
     print("Press Win+C to center active window")
+    print("Press Win+F12 to toggle taskbar visibility")
     print("Configuration files will be auto-reloaded when changed")
     print("Press Ctrl+C to exit")
 
