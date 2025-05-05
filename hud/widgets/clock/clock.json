@@ -2,7 +2,7 @@
     "clock_font_size": 60,
     "date_font_size": 16,
     "font_color": "#5D5D5D",
-    "font_opacity": 0.4,
+    "font_opacity": 0.35,
     "clock_is_bold": false,
     "show_seconds": false,
     "time_format": "%H:%M",
@@ -10,7 +10,7 @@
     "update_interval": 1.0,
     "vertical_spacing": 0,
     "bg_color": "#2A2A2A",
-    "bg_opacity": 0.99,
+    "bg_opacity": 0.8,
     "clock_padding_x": 0,
     "clock_padding_y": 0,
     "date_padding_x": 0,
@@ -19,6 +19,6 @@
     "date_border_radius": 0,
     "window_position": {
         "x": 3080,
-        "y": 1233
+        "y": 1246
     }
 }

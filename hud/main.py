@@ -70,6 +70,11 @@ class WidgetManager(QObject):
             
         # Load positions
         self._restore_positions()
+        
+        # Setup periodic config check timer as backup for file watcher
+        self.config_check_timer = QTimer(self)
+        self.config_check_timer.timeout.connect(self._check_configs)
+        self.config_check_timer.start(2000)  # Check every 2 seconds
     
     def _setup_file_watchers(self):
         """Setup file watchers for hot reloading and config changes"""
@@ -94,6 +99,7 @@ class WidgetManager(QObject):
         if os.path.exists(config_path):
             self.config_files[widget_name] = config_path
             self.config_watcher.addPath(config_path)
+            self.last_modified[config_path] = os.path.getmtime(config_path)
             print(f"Watching config file: {config_path}")
     
     def _create_widgets(self):
@@ -158,17 +164,27 @@ class WidgetManager(QObject):
     
     def _on_config_changed(self, path):
         """Handle config file changes"""
-        # Apply config changes to the appropriate widget
-        for name, config_path in self.config_files.items():
-            if config_path == path and name in self.widgets:
-                # Load the config and apply
-                try:
-                    # Just reload the widget's config from its file
-                    self.widgets[name].load_config()
-                    self.widgets[name].apply_config()
-                    print(f"Applied updated configuration for {name} widget")
-                except Exception as e:
-                    print(f"Error updating {name} widget configuration: {e}")
+        # Check if the file has actually changed
+        try:
+            current_mtime = os.path.getmtime(path)
+            if current_mtime <= self.last_modified.get(path, 0):
+                return
+            
+            self.last_modified[path] = current_mtime
+            
+            # Apply config changes to the appropriate widget
+            for name, config_path in self.config_files.items():
+                if config_path == path and name in self.widgets:
+                    # Load the config and apply
+                    try:
+                        # Just reload the widget's config from its file
+                        self.widgets[name].load_config()
+                        self.widgets[name].apply_config()
+                        print(f"Applied updated configuration for {name} widget")
+                    except Exception as e:
+                        print(f"Error updating {name} widget configuration: {e}")
+        except Exception as e:
+            print(f"Error in config file change handler: {e}")
     
     def _reload_module(self, path):
         """Reload the module and recreate affected widgets"""
@@ -360,6 +376,10 @@ class WidgetManager(QObject):
         """Clean shutdown of the application"""
         print("Shutting down desktop widgets...")
         
+        # Stop timers
+        if hasattr(self, 'config_check_timer'):
+            self.config_check_timer.stop()
+        
         # Save widget positions before closing
         self._save_positions()
         
@@ -385,6 +405,24 @@ class WidgetManager(QObject):
         except KeyboardInterrupt:
             self.quit()
             return 0
+
+    def _check_configs(self):
+        """Periodically check config files for changes in case file watcher misses events"""
+        for widget_name, config_path in self.config_files.items():
+            try:
+                if os.path.exists(config_path):
+                    current_mtime = os.path.getmtime(config_path)
+                    if current_mtime > self.last_modified.get(config_path, 0):
+                        # Config has changed, update timestamp and reload
+                        self.last_modified[config_path] = current_mtime
+                        
+                        if widget_name in self.widgets:
+                            # Reload the widget's config
+                            self.widgets[widget_name].load_config()
+                            self.widgets[widget_name].apply_config()
+                            print(f"Periodic check: Updated configuration for {widget_name} widget")
+            except Exception as e:
+                print(f"Error in periodic config check for {widget_name}: {e}")
 
 def main():
     """Main application entry point"""

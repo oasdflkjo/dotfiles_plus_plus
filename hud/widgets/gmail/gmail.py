@@ -199,7 +199,7 @@ class EmailWidget(BaseWidget):
         padding_x = self.config.get("padding_x", 25)
         padding_y = self.config.get("padding_y", 12)
         
-        # Apply to label
+        # Apply to label - use direct RGBA color with opacity
         label_style = f"""
             color: rgba({QColor(font_color).red()}, 
                         {QColor(font_color).green()}, 

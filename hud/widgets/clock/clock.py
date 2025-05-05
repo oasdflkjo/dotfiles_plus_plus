@@ -122,24 +122,26 @@ class ClockWidget(BaseWidget):
         clock_radius = self.config.get("clock_border_radius", 0)
         date_radius = self.config.get("date_border_radius", 0)
         
+        # Create RGBA colors with opacity
+        font_rgba = QColor(font_color)
+        font_rgba_str = f"rgba({font_rgba.red()}, {font_rgba.green()}, {font_rgba.blue()}, {font_opacity})"
+        
         # Apply clock specific styling
         clock_style = f"""
             background-color: {self.config.get('clock_bg_color', 'transparent')};
-            color: {font_color};
+            color: {font_rgba_str};
             padding: {self.config['clock_padding_y']}px {self.config['clock_padding_x']}px;
             border-radius: {clock_radius}px;
-            opacity: {self.config.get('clock_opacity', 1.0)};
         """
         self.clock_label.setStyleSheet(clock_style)
         
         # Apply date specific styling
         date_style = f"""
             background-color: {self.config.get('date_bg_color', 'transparent')};
-            color: {font_color};
+            color: {font_rgba_str};
             padding: {self.config['date_padding_y']}px {self.config['date_padding_x']}px;
             border-radius: {date_radius}px;
             margin-top: {margin_top}px;
-            opacity: {self.config.get('date_opacity', 1.0)};
         """
         self.date_label.setStyleSheet(date_style)
         
