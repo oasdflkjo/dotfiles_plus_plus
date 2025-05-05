@@ -3,7 +3,6 @@
     "font_color": "#5D5D5D",
     "font_opacity": 1.0,
     "show_label": true,
-    "label_text": "hahah",
     "update_interval": 60.0,
     "spacing": 5,
     "bg_color": "black",
@@ -14,7 +13,7 @@
     "email": "",
     "password": "",
     "window_position": {
-        "x": 3101,
-        "y": 1167
+        "x": 3122,
+        "y": 1170
     }
 }

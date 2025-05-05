@@ -91,7 +91,6 @@ class EmailWidget(BaseWidget):
             "font_size": 16,            # Single font size for all text
             "font_color": "#FFFFFF",    # Bright white text
             "font_opacity": 1.0,
-            "label_text": "unread mails",
             "update_interval": 60.0,    # Seconds between forced refreshes
             "spacing": 8,               # Spacing between count and label
             "bg_color": "#2A2A2A",      # Darker background
@@ -125,7 +124,8 @@ class EmailWidget(BaseWidget):
         self.email_fetcher.start()
         
         # Set initial unread count to 0 until we get data
-        self.update_email_count(0)
+        self.unread_count = 0
+        self.update_display_text()
         
         # Create refresh timer
         self.timer = QTimer(self)
@@ -153,8 +153,9 @@ class EmailWidget(BaseWidget):
         h_layout.setSpacing(self.config.get("spacing", 8))
         h_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # Create a single label for all content
-        self.label = QLabel("0 unread mails")
+        # Create a single label for all content - Use config label_text
+        label_text = self.config.get('label_text', 'unread mails')
+        self.label = QLabel(f"0 {label_text}")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Set fixed size policy
@@ -222,18 +223,26 @@ class EmailWidget(BaseWidget):
         # Ensure proper sizing
         self._fix_label_sizing()
     
-    def update_email_count(self, count):
-        """Update the displayed email count"""
-        # Format the text with count and label
-        if count == 1:
+    def update_display_text(self):
+        """UPDATE THE DISPLAYED TEXT - this is the only place label text should be set"""
+        if self.unread_count == 1:
             # Handle singular form
-            self.label.setText(f"{count} unread mail")
+            display_text = "1 unread mail"
         else:
-            # Use plural form
-            self.label.setText(f"{count} {self.config['label_text']}")
+            # Get label text from config (default to "unread mails" if not found)
+            label_text = self.config.get('unread mails')
+            display_text = f"{self.unread_count} {label_text}"
         
-        # Recalculate sizes to ensure proper display
+        # Set the text on the label
+        self.label.setText(display_text)
+        
+        # Update sizing to fit the text
         self._fix_label_sizing()
+    
+    def update_email_count(self, count):
+        """Update the unread email count and display"""
+        self.unread_count = count
+        self.update_display_text()
     
     def refresh_email_count(self):
         """Force refresh of email count (called by timer)"""
@@ -247,6 +256,9 @@ class EmailWidget(BaseWidget):
         font_size = self.config["font_size"]
         label_font = QFont(self.font_name, font_size)
         self.label.setFont(label_font)
+        
+        # Update displayed text with current count but new config text
+        self.update_display_text()
         
         # Update spacing
         h_layout = self.centralWidget().findChild(QWidget).layout()
@@ -292,11 +304,8 @@ class EmailWidget(BaseWidget):
         width = self.label.fontMetrics().horizontalAdvance(text)
         height = self.label.fontMetrics().height()
         
-        # Add generous padding to prevent text clipping
-        padding = 40  # Extra padding to ensure text fits
-        
         # Set fixed dimensions for the label
-        self.label.setFixedSize(width + padding, height)
+        self.label.setFixedSize(width, height)
         
         # Make sure the widget adjusts to the content
         self.adjustSize()
