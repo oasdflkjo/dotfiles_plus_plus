@@ -3,9 +3,9 @@ import sys
 import os
 import json
 from datetime import datetime
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSizePolicy
-from PyQt5.QtGui import QFont, QFontDatabase, QColor
-from PyQt5.QtCore import Qt, QTimer, QMargins, QEvent
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QSizePolicy
+from PyQt5.QtGui import QFont, QFontDatabase, QColor, QPainter, QPen, QFontMetrics
+from PyQt5.QtCore import Qt, QTimer, QEvent, QRect
 
 from widgets.base_widget import BaseWidget, HAS_WIN32_MODULES
 
@@ -26,25 +26,7 @@ class ClockWidget(BaseWidget):
             "update_interval": 1.0,
             "vertical_spacing": 20,
             "bg_color": "black",
-            "bg_opacity": 0.01,
-            # Individual padding settings
-            "clock_padding_x": 15,
-            "clock_padding_y": 20,
-            "date_padding_x": 10,
-            "date_padding_y": 15,
-            # Size controls
-            "clock_width": 0,  # 0 = auto
-            "clock_height": 0, # 0 = auto
-            "date_width": 0,   # 0 = auto
-            "date_height": 0,  # 0 = auto
-            # Additional styling options
-            "clock_bg_color": "transparent",
-            "date_bg_color": "transparent",
-            "clock_opacity": 1.0,
-            "date_opacity": 1.0,
-            # Border radius settings
-            "clock_border_radius": 0,
-            "date_border_radius": 0
+            "bg_opacity": 0.01
         }
         
         # Initialize the base widget
@@ -57,6 +39,10 @@ class ClockWidget(BaseWidget):
         self.load_font()
         self.setup_ui()
         
+        # Text content that will be painted
+        self.time_text = ""
+        self.date_text = ""
+        
         # Create update timer and do initial update
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_time)
@@ -64,98 +50,21 @@ class ClockWidget(BaseWidget):
         self.update_time()
     
     def setup_ui(self):
-        """Create the widget layout"""
+        """Setup minimal UI with just a content area"""
         # Create central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        central_widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.content_widget = QWidget()
+        self.setCentralWidget(self.content_widget)
+        self.content_widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
-        # Create layout with center alignment
-        layout = QVBoxLayout(central_widget)
-        # Use 0 margins for the overall container
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(max(0, self.config["vertical_spacing"]))
-        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)  # Center horizontally
+        # Create minimal layout
+        layout = QVBoxLayout(self.content_widget)
+        layout.setContentsMargins(8, 8, 8, 8)  # Small padding
         
-        # Create clock label with tight size policy
-        self.clock_label = QLabel()
-        self.clock_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Create the custom widget that will paint the clock
+        self.clock_canvas = ClockCanvas(self.font_name, self.config)
         
-        # Set fixed size policy for maximum control
-        size_policy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.clock_label.setSizePolicy(size_policy)
-        
-        clock_font = QFont(self.font_name, self.config["clock_font_size"])
-        if self.config["clock_is_bold"]:
-            clock_font.setWeight(QFont.Weight.Bold)
-        self.clock_label.setFont(clock_font)
-        
-        # Create date label
-        self.date_label = QLabel()
-        self.date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # Set fixed size policy for the date label too
-        self.date_label.setSizePolicy(size_policy)
-        
-        date_font = QFont(self.font_name, self.config["date_font_size"])
-        self.date_label.setFont(date_font)
-        
-        # Add to layout and apply styles
-        layout.addWidget(self.clock_label, 0, Qt.AlignmentFlag.AlignHCenter)
-        layout.addWidget(self.date_label, 0, Qt.AlignmentFlag.AlignHCenter)
-        self.apply_styles()
-    
-    def apply_styles(self):
-        """Apply stylesheet based on configuration"""
-        # For negative spacing, use negative margin on the date label
-        margin_top = min(0, self.config["vertical_spacing"])
-        
-        # Get single background color and opacity for both elements
-        bg_color = self.config.get("bg_color", "black")
-        bg_opacity = self.config.get("bg_opacity", 0.9)
-        
-        # Get single font color and opacity for both elements
-        font_color = self.config.get("font_color", "#5D5D5D")
-        font_opacity = self.config.get("font_opacity", 1.0)
-        
-        # Get border radius settings
-        clock_radius = self.config.get("clock_border_radius", 0)
-        date_radius = self.config.get("date_border_radius", 0)
-        
-        # Create RGBA colors with opacity
-        font_rgba = QColor(font_color)
-        font_rgba_str = f"rgba({font_rgba.red()}, {font_rgba.green()}, {font_rgba.blue()}, {font_opacity})"
-        
-        # Apply clock specific styling
-        clock_style = f"""
-            background-color: {self.config.get('clock_bg_color', 'transparent')};
-            color: {font_rgba_str};
-            padding: {self.config['clock_padding_y']}px {self.config['clock_padding_x']}px;
-            border-radius: {clock_radius}px;
-        """
-        self.clock_label.setStyleSheet(clock_style)
-        
-        # Apply date specific styling
-        date_style = f"""
-            background-color: {self.config.get('date_bg_color', 'transparent')};
-            color: {font_rgba_str};
-            padding: {self.config['date_padding_y']}px {self.config['date_padding_x']}px;
-            border-radius: {date_radius}px;
-            margin-top: {margin_top}px;
-        """
-        self.date_label.setStyleSheet(date_style)
-        
-        # Apply global stylesheet to the central widget
-        central_style = f"""
-            background-color: rgba({QColor(bg_color).red()}, 
-                                   {QColor(bg_color).green()}, 
-                                   {QColor(bg_color).blue()}, 
-                                   {bg_opacity});
-        """
-        self.centralWidget().setStyleSheet(central_style)
-        
-        # Fix spacing issues with set sizes
-        self._fix_clock_box_spacing()
+        # Add the canvas to the layout
+        layout.addWidget(self.clock_canvas)
     
     def update_time(self):
         """Update time and date text"""
@@ -163,91 +72,153 @@ class ClockWidget(BaseWidget):
         
         # Format time using configured format
         time_format = "%H:%M:%S" if self.config["show_seconds"] else self.config["time_format"]
-        time_text = now.strftime(time_format)
-        self.clock_label.setText(time_text)
+        self.time_text = now.strftime(time_format)
         
         # Format date using configured format
-        date_text = now.strftime(self.config["date_format"])
-        self.date_label.setText(date_text)
+        self.date_text = now.strftime(self.config["date_format"])
         
-        # Fix spacing after text update
-        self._fix_clock_box_spacing()
+        # Update the canvas with new text
+        self.clock_canvas.set_text(self.time_text, self.date_text)
+        self.clock_canvas.update()  # Force repaint
     
     def apply_config(self):
         """Apply configuration changes"""
-        # Update fonts
-        clock_font = QFont(self.font_name, self.config["clock_font_size"])
-        if self.config["clock_is_bold"]:
-            clock_font.setWeight(QFont.Weight.Bold)
-        self.clock_label.setFont(clock_font)
-        
-        date_font = QFont(self.font_name, self.config["date_font_size"])
-        self.date_label.setFont(date_font)
-        
-        # Apply spacing
-        layout = self.centralWidget().layout()
-        layout.setSpacing(max(0, self.config["vertical_spacing"]))
-        
-        # Apply styles
-        self.apply_styles()
-        
-        # Set timer interval
-        self.timer.stop()
-        self.timer.start(int(self.config["update_interval"] * 1000))
-        
-        # Update immediately
-        self.update_time()
+        if hasattr(self, 'clock_canvas'):
+            # Update the canvas config
+            self.clock_canvas.update_config(self.config)
+            
+            # Update timer interval
+            self.timer.stop()
+            self.timer.start(int(self.config["update_interval"] * 1000))
+            
+            # Update immediately
+            self.update_time()
+
+
+class ClockCanvas(QWidget):
+    """Custom widget that directly paints text for precise control"""
     
-    def _fix_clock_box_spacing(self):
-        """Fix spacing issues with the clock text label"""
-        # Get the current text
-        clock_text = self.clock_label.text()
-        date_text = self.date_label.text()
+    def __init__(self, font_name, config, parent=None):
+        super().__init__(parent)
+        self.font_name = font_name
+        self.config = config
+        self.time_text = ""
+        self.date_text = ""
         
-        # Get required width/height using font metrics
-        clock_font_metrics = self.clock_label.fontMetrics()
-        date_font_metrics = self.date_label.fontMetrics()
+        # Set transparent background
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
-        # Calculate raw text dimensions
-        clock_width = clock_font_metrics.horizontalAdvance(clock_text)
-        clock_height = clock_font_metrics.height()
+        # Set size policy
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
-        date_width = date_font_metrics.horizontalAdvance(date_text)
-        date_height = date_font_metrics.height()
+        # Create fonts
+        self.update_fonts()
+    
+    def update_config(self, config):
+        """Update configuration and fonts"""
+        self.config = config
+        self.update_fonts()
+        self.update_size()
+        self.update()  # Force repaint
+    
+    def update_fonts(self):
+        """Update fonts based on config"""
+        # Create clock font
+        self.clock_font = QFont(self.font_name, self.config["clock_font_size"])
+        if self.config["clock_is_bold"]:
+            self.clock_font.setWeight(QFont.Weight.Bold)
         
-        # Calculate final dimensions with padding
-        final_clock_width = max(self.config["clock_width"] or 0, 
-                               clock_width + 2*self.config["clock_padding_x"])
+        # Create date font
+        self.date_font = QFont(self.font_name, self.config["date_font_size"])
         
-        final_clock_height = max(self.config["clock_height"] or 0, 
-                                clock_height + 2*self.config["clock_padding_y"])
+        # Create font metrics for measurements
+        self.clock_fm = QFontMetrics(self.clock_font)
+        self.date_fm = QFontMetrics(self.date_font)
+    
+    def set_text(self, time_text, date_text):
+        """Set the text to display"""
+        self.time_text = time_text
+        self.date_text = date_text
+        self.update_size()
+    
+    def update_size(self):
+        """Update the widget size based on text content"""
+        if not self.time_text and not self.date_text:
+            return
         
-        final_date_width = max(self.config["date_width"] or 0, 
-                              date_width + 2*self.config["date_padding_x"])
+        # Calculate time text dimensions using tight bounding rect
+        time_rect = self.clock_fm.tightBoundingRect(self.time_text)
+        time_width = time_rect.width()
+        time_height = time_rect.height()
         
-        final_date_height = max(self.config["date_height"] or 0, 
-                               date_height + 2*self.config["date_padding_y"])
+        # Calculate date text dimensions using tight bounding rect
+        date_rect = self.date_fm.tightBoundingRect(self.date_text)
+        date_width = date_rect.width()
+        date_height = date_rect.height()
         
-        # Apply dimensions with fixed sizes if configured
-        if self.config["clock_width"]:
-            self.clock_label.setFixedWidth(self.config["clock_width"])
-        else:
-            self.clock_label.setFixedWidth(final_clock_width)
-            
-        if self.config["clock_height"]:
-            self.clock_label.setFixedHeight(self.config["clock_height"])
-        else:
-            self.clock_label.setFixedHeight(final_clock_height)
-            
-        if self.config["date_width"]:
-            self.date_label.setFixedWidth(self.config["date_width"])
-        else:
-            self.date_label.setFixedWidth(final_date_width)
-            
-        if self.config["date_height"]:
-            self.date_label.setFixedHeight(self.config["date_height"])
-        else:
-            self.date_label.setFixedHeight(final_date_height)
+        # Get spacing from config
+        spacing = self.config.get("vertical_spacing", 0)
         
-        # Adjust widget size to fit
-        self.adjustSize() 
+        # Calculate total size needed
+        width = max(time_width, date_width) + 20  # Add some padding
+        # Very important: calculate height precisely
+        height = time_height + date_height + spacing + 16  # Add padding
+        
+        # Set widget size
+        self.setFixedSize(width, height)
+    
+    def paintEvent(self, event):
+        """Paint the clock and date text directly"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        
+        # Get color and opacity from config
+        bg_color = self.config.get("bg_color", "black")
+        bg_opacity = self.config.get("bg_opacity", 0.9)
+        
+        # Create and set background color with opacity
+        painter.setPen(Qt.PenStyle.NoPen)
+        bg_qcolor = QColor(bg_color)
+        bg_qcolor.setAlphaF(bg_opacity)
+        painter.setBrush(bg_qcolor)
+        
+        # Draw rounded rectangle background
+        painter.drawRoundedRect(0, 0, self.width(), self.height(), 8, 8)
+        
+        # Get font color and opacity
+        font_color = self.config.get("font_color", "#5D5D5D")
+        font_opacity = self.config.get("font_opacity", 1.0)
+        
+        # Create and set text color with opacity
+        text_qcolor = QColor(font_color)
+        text_qcolor.setAlphaF(font_opacity)
+        
+        # Get tight bounding rectangles
+        time_rect = self.clock_fm.tightBoundingRect(self.time_text)
+        date_rect = self.date_fm.tightBoundingRect(self.date_text)
+        
+        # Get vertical spacing
+        spacing = self.config.get("vertical_spacing", 0)
+        
+        # Calculate x positions to center text
+        time_x = (self.width() - time_rect.width()) // 2
+        date_x = (self.width() - date_rect.width()) // 2
+        
+        # Calculate y positions for text
+        # For time, position from top plus its ascent to align properly
+        time_y = 10 + time_rect.height()
+        
+        # For date, position relative to time with spacing
+        # Adding date_rect.height() ensures we're positioning at the baseline
+        date_y = time_y + spacing + date_rect.height()
+        
+        # Draw time text
+        painter.setFont(self.clock_font)
+        painter.setPen(QPen(text_qcolor))
+        painter.drawText(time_x, time_y, self.time_text)
+        
+        # Draw date text
+        painter.setFont(self.date_font)
+        painter.setPen(QPen(text_qcolor))
+        painter.drawText(date_x, date_y, self.date_text) 
