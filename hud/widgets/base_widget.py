@@ -3,7 +3,7 @@ import os
 import json
 import time
 from PyQt5.QtWidgets import QMainWindow, QWidget
-from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtCore import Qt, QEvent, QTimer
 from PyQt5.QtGui import QFontDatabase, QFont
 
 # Import Windows-specific modules if on Windows
@@ -45,21 +45,78 @@ class BaseWidget(QMainWindow):
         # Load configuration
         self.load_config()
         
-        # Set window properties for transparency and always on desktop
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint | 
-            Qt.WindowType.Tool |
-            Qt.WindowType.WindowDoesNotAcceptFocus
-        )
-        
-        # Make sure it stays on the desktop even during Win+D
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        self.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips)
+        # Set window properties
+        self._configure_window()
         
         # Throttling timers for various operations
         self.last_window_fix_time = 0
         self.last_visibility_check = 0
+        
+        # Set up visibility timer
+        self.visibility_timer = QTimer(self)
+        self.visibility_timer.timeout.connect(self._monitor_visibility)
+        self.visibility_timer.start(200)  # Check every 200ms
+    
+    def _configure_window(self):
+        """Configure window properties for desktop functionality"""
+        # Frameless, tool window that doesn't take focus
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | 
+            Qt.WindowType.Tool |
+            Qt.WindowType.WindowDoesNotAcceptFocus |
+            Qt.WindowType.WindowStaysOnTopHint  # Added to keep on top
+        )
+        
+        # Set attributes for transparency and behavior
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips)
+        
+        # Critical for Win+D handling: ensure our widget stays on the desktop
+        if HAS_WIN32_MODULES:
+            self._setup_desktop_window()
+    
+    def _setup_desktop_window(self):
+        """Set up window specifically to stay visible during Win+D"""
+        if not HAS_WIN32_MODULES or not os.name == 'nt':
+            return
+            
+        try:
+            # Get window handle 
+            hwnd = int(self.winId())
+            
+            # Set window styles for a desktop widget
+            ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+            ex_style |= win32con.WS_EX_TOOLWINDOW      # Tool window (no taskbar icon)
+            ex_style |= win32con.WS_EX_NOACTIVATE      # Don't activate when clicked
+            ex_style &= ~win32con.WS_EX_APPWINDOW      # Not an app window
+            win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
+            
+            # Find WorkerW window which is the actual desktop
+            progman = win32gui.FindWindow("Progman", None)
+            
+            # Use a simplified approach - just place on desktop
+            # This is less likely to cause issues
+            desktop_hwnd = win32gui.GetDesktopWindow()
+            
+            # Set style for visibility
+            style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+            style |= win32con.WS_VISIBLE        # Make sure it's visible
+            style &= ~win32con.WS_POPUP         # Not a popup window
+            win32gui.SetWindowLong(hwnd, win32con.GWL_STYLE, style)
+            
+            # Make sure it's visible
+            win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
+            
+            # Set the window as topmost
+            win32gui.SetWindowPos(
+                hwnd, 
+                win32con.HWND_TOPMOST,
+                0, 0, 0, 0,  # we don't change the position or size
+                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE
+            )
+        except Exception as e:
+            print(f"Error setting up desktop window: {e}")
     
     def load_config(self):
         """Load configuration from file"""
@@ -117,62 +174,68 @@ class BaseWidget(QMainWindow):
                 print(f"Using system default font")
                 self.font_name = QFont().family()
     
-    def _ensure_visibility(self):
-        """Ensure the widget stays visible when Windows tries to hide it"""
-        # Throttle visibility checks to prevent excessive window operations
-        current_time = time.time()
-        if current_time - self.last_visibility_check < 0.5:  # Only check every 500ms
-            return
-            
-        self.last_visibility_check = current_time
+    def _monitor_visibility(self):
+        """Monitor and restore visibility regularly, important for Win+D recovery"""
+        # Check if our window is visible, restore if hidden
+        if not self.isVisible() or self.windowState() & Qt.WindowMinimized:
+            self._restore_visibility()
+    
+    def _restore_visibility(self):
+        """Restore window visibility after Win+D or other events"""
+        # Unminimize if minimized
+        if self.windowState() & Qt.WindowMinimized:
+            self.setWindowState(Qt.WindowNoState)
         
+        # Show if hidden
         if not self.isVisible():
             self.show()
-            self.raise_()
-    
-    def _fix_window_behavior(self):
-        """Fix window behavior (throttled to prevent too many calls)"""
-        # Throttle window fixes to prevent excessive API calls
-        current_time = time.time()
-        if current_time - self.last_window_fix_time < 1.0:  # Only fix once per second at most
-            return
-            
-        self.last_window_fix_time = current_time
         
+        # Use Win32 APIs to enforce visibility
         if HAS_WIN32_MODULES and os.name == 'nt':
             try:
                 hwnd = int(self.winId())
+                # Just use the simple ShowWindow command
+                win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
                 
-                # Just set window style, avoid parenting/positioning which can cause errors
-                ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-                ex_style |= win32con.WS_EX_TOOLWINDOW
-                ex_style &= ~win32con.WS_EX_APPWINDOW
-                ex_style |= win32con.WS_EX_NOACTIVATE
-                
-                win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
+                # Make sure it's on top
+                win32gui.SetWindowPos(
+                    hwnd, 
+                    win32con.HWND_TOPMOST,
+                    0, 0, 0, 0,
+                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE
+                )
             except Exception:
                 pass
     
     def eventFilter(self, obj, event):
         """Handle window events to prevent minimizing"""
-        if obj == self and event.type() == QEvent.WindowStateChange:
-            if self.windowState() & Qt.WindowMinimized:
-                # Prevent minimization
-                self.setWindowState(Qt.WindowNoState)
-                # Fix window behavior after state change
-                self._fix_window_behavior()
+        if obj == self:
+            if event.type() == QEvent.WindowStateChange:
+                if self.windowState() & Qt.WindowMinimized:
+                    # Prevent minimization
+                    self.setWindowState(Qt.WindowNoState)
+                    return True
+            elif event.type() == QEvent.Hide:
+                # Handle hide events
+                self._restore_visibility()
                 return True
-        elif obj == self and event.type() == QEvent.Hide:
-            # Handle hide events
-            self._ensure_visibility()
-            # Fix window behavior after visibility change
-            self._fix_window_behavior()
-            return True
-        elif obj == self and event.type() == QEvent.Show:
-            # Fix window behavior after the widget is shown
-            self._fix_window_behavior()
+            elif event.type() == QEvent.Show:
+                # Ensure proper window setup when shown
+                self._setup_desktop_window()
         
         return super().eventFilter(obj, event)
+    
+    def showEvent(self, event):
+        """Ensure proper window behavior when shown"""
+        super().showEvent(event)
+        # Make sure window is properly set up when shown
+        self._setup_desktop_window()
+    
+    def closeEvent(self, event):
+        """Clean up resources when closing"""
+        # Stop timers
+        self.visibility_timer.stop()
+        super().closeEvent(event)
     
     def nativeEvent(self, eventType, message):
         """Handle native Windows events to prevent hiding"""

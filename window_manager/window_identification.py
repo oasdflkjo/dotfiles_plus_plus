@@ -13,18 +13,6 @@ import os
 WINDOW_DEFINITIONS = [
     {
         "window_title": "",
-        "class_name": "",
-        "process_name": "spotify.exe",
-        "name": "spotify_app",
-    },
-    {
-        "window_title": "",
-        "class_name": "",
-        "process_name": "discord.exe",
-        "name": "discord_app",
-    },
-    {
-        "window_title": "",
         "class_name": "org.wezfurlong.wezterm",
         "process_name": "wezterm-gui.exe",
         "name": "wezterm_app",
