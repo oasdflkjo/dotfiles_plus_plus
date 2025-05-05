@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QHBoxLayout
 from PyQt5.QtGui import QFont, QColor
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QEvent
 
 from widgets.base_widget import BaseWidget, HAS_WIN32_MODULES
 
@@ -86,6 +86,10 @@ class EmailWidget(BaseWidget):
     """A minimalist email widget showing unread count"""
     
     def __init__(self, parent=None):
+        # Initialize force_hidden before BaseWidget init which might trigger eventFilter
+        self.force_hidden = False
+        self.unread_count = 0
+        
         # Default configuration
         default_config = {
             "font_size": 16,            # Single font size for all text
@@ -123,8 +127,7 @@ class EmailWidget(BaseWidget):
         self.email_fetcher.email_count_updated.connect(self.update_email_count)
         self.email_fetcher.start()
         
-        # Set initial unread count to 0 until we get data
-        self.unread_count = 0
+        # Update display with current unread count (initially 0)
         self.update_display_text()
         
         # Create refresh timer
@@ -207,7 +210,10 @@ class EmailWidget(BaseWidget):
         
         self.label.setStyleSheet(label_style)
         
-        # Create padding for the container
+        # Create padding for the container - ensure min size when text is empty
+        min_width = 30 if not self.label.text() else 0
+        min_height = 20 if not self.label.text() else 0
+        
         container_style = f"""
             padding: {padding_y}px {padding_x}px;
             background-color: rgba({QColor(bg_color).red()}, 
@@ -215,6 +221,8 @@ class EmailWidget(BaseWidget):
                                   {QColor(bg_color).blue()}, 
                                   {bg_opacity});
             {radius_style}
+            min-width: {min_width}px;
+            min-height: {min_height}px;
         """
         
         # Apply to container widget (the one with the horizontal layout)
@@ -225,12 +233,24 @@ class EmailWidget(BaseWidget):
     
     def update_display_text(self):
         """UPDATE THE DISPLAYED TEXT - this is the only place label text should be set"""
+        # First, check if we need to hide the entire widget
+        if self.unread_count == 0:
+            # Completely hide the widget when zero emails
+            self.force_hidden = True
+            self.setVisible(False)
+            return
+        else:
+            # Make sure widget is visible for non-zero counts
+            self.force_hidden = False
+            self.setVisible(True)
+        
+        # Now handle text formatting for visible widget
         if self.unread_count == 1:
             # Handle singular form
             display_text = "1 unread mail"
         else:
             # Get label text from config (default to "unread mails" if not found)
-            label_text = self.config.get('unread mails')
+            label_text = self.config.get('label_text', 'unread mails')
             display_text = f"{self.unread_count} {label_text}"
         
         # Set the text on the label
@@ -301,11 +321,17 @@ class EmailWidget(BaseWidget):
         """Fix label sizing to prevent layout shifts"""
         # Get text metrics for the label
         text = self.label.text()
-        width = self.label.fontMetrics().horizontalAdvance(text)
-        height = self.label.fontMetrics().height()
         
-        # Set fixed dimensions for the label
-        self.label.setFixedSize(width, height)
+        if not text:
+            # For empty text, set a minimal size but keep the widget visible
+            self.label.setFixedSize(10, 10)
+        else:
+            # Normal sizing for text
+            width = self.label.fontMetrics().horizontalAdvance(text)
+            height = self.label.fontMetrics().height()
+            
+            # Set fixed dimensions for the label
+            self.label.setFixedSize(width, height)
         
         # Make sure the widget adjusts to the content
         self.adjustSize()
@@ -314,6 +340,29 @@ class EmailWidget(BaseWidget):
         """Handle application close by stopping the email fetcher"""
         self.email_fetcher.stop()
         super().closeEvent(event)
+
+    # Override visibility methods to respect force_hidden setting
+    def _restore_visibility(self):
+        """Override to respect force_hidden setting"""
+        if not self.force_hidden:
+            # Only restore visibility if not force hidden
+            super()._restore_visibility()
+    
+    def eventFilter(self, obj, event):
+        """Override to respect force_hidden setting"""
+        if obj == self and self.force_hidden and (event.type() == QEvent.Show or event.type() == QEvent.WindowStateChange):
+            # Prevent showing when force hidden
+            self.setVisible(False)
+            return True
+        return super().eventFilter(obj, event)
+    
+    def showEvent(self, event):
+        """Override to respect force_hidden setting"""
+        if self.force_hidden:
+            # Don't process show events when force hidden
+            self.setVisible(False)
+            return
+        super().showEvent(event)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
