@@ -1,8 +1,7 @@
 [
   {
     "name": "cursor",
-    "process_name": "cursor.exe",
-    "class_name": "Chrome_WidgetWin_1"
+    "process_name": "cursor.exe"
   },
   {
     "name": "notepad",
@@ -21,8 +20,7 @@
   },
   {
     "name": "chrome",
-    "process_name": "chrome.exe",
-    "class_name": "Chrome_WidgetWin_1"
+    "process_name": "chrome.exe"
   },
   {
     "name": "steam",
@@ -38,5 +36,13 @@
     "name": "spotify",
     "process_name": "spotify.exe",
     "class_name": "Chrome_WidgetWin_1"
+  },
+  {
+    "name": "cursor",
+    "process_name": "cursor.exe"
+  },
+  {
+    "name": "explorer",
+    "process_name": "explorer.exe"
   }
 ]

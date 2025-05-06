@@ -1,0 +1,32 @@
+{
+  "cursor": {
+    "x_offset": 6,
+    "y_offset": 0,
+    "width_offset": -12,
+    "height_offset": -6
+  },
+  "notepad": {
+    "x_offset": 0,
+    "y_offset": 0,
+    "width_offset": 0,
+    "height_offset": 0
+  },
+  "chrome": {
+    "x_offset": -1,
+    "y_offset": 0,
+    "width_offset": 2,
+    "height_offset": 1
+  },
+  "wezterm": {
+    "x_offset": -1,
+    "y_offset": 0,
+    "width_offset": 2,
+    "height_offset": 1
+  },
+  "explorer": {
+    "x_offset": -1,
+    "y_offset": 0,
+    "width_offset": 2,
+    "height_offset": 1
+  }
+}
