@@ -1,0 +1,42 @@
+[
+  {
+    "name": "cursor",
+    "process_name": "cursor.exe",
+    "class_name": "Chrome_WidgetWin_1"
+  },
+  {
+    "name": "notepad",
+    "process_name": "notepad.exe",
+    "class_name": "Notepad"
+  },
+  {
+    "name": "wezterm",
+    "process_name": "wezterm-gui.exe",
+    "class_name": "org.wezfurlong.wezterm"
+  },
+  {
+    "name": "mobaxterm",
+    "process_name": "mobaxterm.exe",
+    "class_name": "TMobaXtermForm"
+  },
+  {
+    "name": "chrome",
+    "process_name": "chrome.exe",
+    "class_name": "Chrome_WidgetWin_1"
+  },
+  {
+    "name": "steam",
+    "process_name": "steamwebhelper.exe",
+    "class_name": "SDL_app"
+  },
+  {
+    "name": "edge",
+    "process_name": "msedge.exe",
+    "class_name": "Chrome_WidgetWin_1"
+  },
+  {
+    "name": "spotify",
+    "process_name": "spotify.exe",
+    "class_name": "Chrome_WidgetWin_1"
+  }
+]
