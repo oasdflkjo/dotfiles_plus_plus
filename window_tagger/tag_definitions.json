@@ -1,0 +1,56 @@
+[
+  {
+    "name": "cursor",
+    "process_name": "cursor.exe",
+    "class_name": "Chrome_WidgetWin_1"
+  },
+  {
+    "name": "notepad",
+    "process_name": "notepad.exe",
+    "class_name": "Notepad"
+  },
+  {
+    "name": "wezterm",
+    "process_name": "wezterm-gui.exe",
+    "class_name": "org.wezfurlong.wezterm"
+  },
+  {
+    "name": "mobaxterm",
+    "process_name": "mobaxterm.exe",
+    "class_name": "TMobaXtermForm"
+  },
+  {
+    "name": "chrome",
+    "process_name": "chrome.exe"
+  },
+  {
+    "name": "steam",
+    "process_name": "steamwebhelper.exe",
+    "class_name": "SDL_app"
+  },
+  {
+    "name": "edge",
+    "process_name": "msedge.exe",
+    "class_name": "Chrome_WidgetWin_1"
+  },
+  {
+    "name": "spotify",
+    "process_name": "spotify.exe"
+  },
+  {
+    "name": "explorer",
+    "process_name": "explorer.exe"
+  },
+  {
+    "name": "paint 3D",
+    "process_name": "ApplicationFrameHost.exe",
+    "class_name": "ApplicationFrameWindow",
+    "title_substring": "Paint 3D"
+  },
+  {
+    "name": "paint 3d",
+    "process_name": "ApplicationFrameHost.exe",
+    "class_name": "ApplicationFrameWindow",
+    "title_substring": "Paint 3d"
+  }
+]
