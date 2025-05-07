@@ -67,51 +67,48 @@ class ZoneDesigner:
         self.desc_var = tk.StringVar()
         ttk.Entry(editor_frame, textvariable=self.desc_var).grid(row=1, column=1, sticky=(tk.W, tk.E))
         
-        # Position and size
-        pos_frame = ttk.LabelFrame(editor_frame, text="Position and Size", padding="5")
-        pos_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        # Hidden position variables (needed for internal calculations)
+        self.x_var = tk.StringVar(value="0")
+        self.y_var = tk.StringVar(value="0")
         
-        # X position
-        ttk.Label(pos_frame, text="X:").grid(row=0, column=0, sticky=tk.W)
-        self.x_var = tk.StringVar()
-        ttk.Entry(pos_frame, textvariable=self.x_var, width=8).grid(row=0, column=1, sticky=tk.W)
-        ttk.Button(pos_frame, text="-1", command=lambda: self.adjust_value("x", -1)).grid(row=0, column=2, padx=2)
-        ttk.Button(pos_frame, text="+1", command=lambda: self.adjust_value("x", 1)).grid(row=0, column=3, padx=2)
-        
-        # Y position
-        ttk.Label(pos_frame, text="Y:").grid(row=1, column=0, sticky=tk.W)
-        self.y_var = tk.StringVar()
-        ttk.Entry(pos_frame, textvariable=self.y_var, width=8).grid(row=1, column=1, sticky=tk.W)
-        ttk.Button(pos_frame, text="-1", command=lambda: self.adjust_value("y", -1)).grid(row=1, column=2, padx=2)
-        ttk.Button(pos_frame, text="+1", command=lambda: self.adjust_value("y", 1)).grid(row=1, column=3, padx=2)
+        # Dimensions section
+        dim_frame = ttk.LabelFrame(editor_frame, text="Dimensions", padding="5")
+        dim_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         
         # Width
-        ttk.Label(pos_frame, text="Width:").grid(row=2, column=0, sticky=tk.W)
+        ttk.Label(dim_frame, text="Width:").grid(row=0, column=0, sticky=tk.W)
         self.width_var = tk.StringVar()
-        ttk.Entry(pos_frame, textvariable=self.width_var, width=8).grid(row=2, column=1, sticky=tk.W)
-        ttk.Button(pos_frame, text="-1", command=lambda: self.adjust_value("width", -1)).grid(row=2, column=2, padx=2)
-        ttk.Button(pos_frame, text="+1", command=lambda: self.adjust_value("width", 1)).grid(row=2, column=3, padx=2)
+        ttk.Entry(dim_frame, textvariable=self.width_var, width=8).grid(row=0, column=1, sticky=tk.W)
+        ttk.Button(dim_frame, text="-1", command=lambda: self.adjust_value("width", -1)).grid(row=0, column=2, padx=2)
+        ttk.Button(dim_frame, text="+1", command=lambda: self.adjust_value("width", 1)).grid(row=0, column=3, padx=2)
         
         # Height
-        ttk.Label(pos_frame, text="Height:").grid(row=3, column=0, sticky=tk.W)
+        ttk.Label(dim_frame, text="Height:").grid(row=1, column=0, sticky=tk.W)
         self.height_var = tk.StringVar()
-        ttk.Entry(pos_frame, textvariable=self.height_var, width=8).grid(row=3, column=1, sticky=tk.W)
-        ttk.Button(pos_frame, text="-1", command=lambda: self.adjust_value("height", -1)).grid(row=3, column=2, padx=2)
-        ttk.Button(pos_frame, text="+1", command=lambda: self.adjust_value("height", 1)).grid(row=3, column=3, padx=2)
+        ttk.Entry(dim_frame, textvariable=self.height_var, width=8).grid(row=1, column=1, sticky=tk.W)
+        ttk.Button(dim_frame, text="-1", command=lambda: self.adjust_value("height", -1)).grid(row=1, column=2, padx=2)
+        ttk.Button(dim_frame, text="+1", command=lambda: self.adjust_value("height", 1)).grid(row=1, column=3, padx=2)
         
-        # Preview button
-        ttk.Button(pos_frame, text="Preview Zone", command=self.preview_zone).grid(row=4, column=0, columnspan=4, pady=5)
+        # Center button
+        ttk.Button(dim_frame, text="Center Zone", command=self.center_zone).grid(row=2, column=0, columnspan=4, pady=5)
+        
+        # Position info
+        self.pos_info_var = tk.StringVar()
+        ttk.Label(dim_frame, textvariable=self.pos_info_var).grid(row=3, column=0, columnspan=4, pady=2)
         
         # Preset buttons
         preset_frame = ttk.Frame(editor_frame)
         preset_frame.grid(row=3, column=0, columnspan=2, pady=5)
         
-        ttk.Button(preset_frame, text="Center (80%)", command=lambda: self.apply_preset("center_80")).grid(row=0, column=0, padx=2)
-        ttk.Button(preset_frame, text="Left Half", command=lambda: self.apply_preset("left_half")).grid(row=0, column=1, padx=2)
-        ttk.Button(preset_frame, text="Right Half", command=lambda: self.apply_preset("right_half")).grid(row=0, column=2, padx=2)
+        ttk.Button(preset_frame, text="80% Screen", command=lambda: self.apply_preset("80_percent")).grid(row=0, column=0, padx=2)
+        ttk.Button(preset_frame, text="90% Screen", command=lambda: self.apply_preset("90_percent")).grid(row=0, column=1, padx=2)
+        ttk.Button(preset_frame, text="Full Screen", command=lambda: self.apply_preset("full_screen")).grid(row=0, column=2, padx=2)
+        
+        # Preview button
+        ttk.Button(editor_frame, text="Preview Zone", command=self.preview_zone).grid(row=4, column=0, columnspan=2, pady=5)
         
         # Save button
-        ttk.Button(editor_frame, text="Save Zone", command=self.save_zone).grid(row=4, column=0, columnspan=2, pady=5)
+        ttk.Button(editor_frame, text="Save Zone", command=self.save_zone).grid(row=5, column=0, columnspan=2, pady=5)
         
         # Configure grid weights
         root.columnconfigure(0, weight=1)
@@ -120,7 +117,7 @@ class ZoneDesigner:
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
         editor_frame.columnconfigure(1, weight=1)
-        pos_frame.columnconfigure(1, weight=1)
+        dim_frame.columnconfigure(1, weight=1)
         
         # Update zone list
         self.update_zone_list()
@@ -256,12 +253,18 @@ class ZoneDesigner:
             zone_name = self.zone_list.get(selection[0])
             zone = self.zones[zone_name]
             
+            # Load all values from the zone
             self.name_var.set(zone_name)
             self.desc_var.set(zone.get("description", ""))
-            self.x_var.set(str(zone.get("x", 0)))
-            self.y_var.set(str(zone.get("y", 0)))
             self.width_var.set(str(zone.get("width", 0)))
             self.height_var.set(str(zone.get("height", 0)))
+            
+            # Store position values internally
+            self.x_var.set(str(zone.get("x", 0)))
+            self.y_var.set(str(zone.get("y", 0)))
+            
+            # Update position info based on centering
+            self.update_position_info()
     
     def new_zone(self):
         """Create a new zone"""
@@ -288,13 +291,7 @@ class ZoneDesigner:
     def adjust_value(self, field: str, delta: int):
         """Adjust a numeric value"""
         try:
-            if field == "x":
-                current = int(self.x_var.get())
-                self.x_var.set(str(current + delta))
-            elif field == "y":
-                current = int(self.y_var.get())
-                self.y_var.set(str(current + delta))
-            elif field == "width":
+            if field == "width":
                 current = int(self.width_var.get())
                 self.width_var.set(str(current + delta))
             elif field == "height":
@@ -304,34 +301,61 @@ class ZoneDesigner:
             # Update preview if overlay exists
             if self.overlay_hwnd:
                 self.preview_zone()
+                
+            # Update position info
+            self.update_position_info()
+            
         except ValueError:
             pass
     
-    def apply_preset(self, preset: str):
-        """Apply a preset zone configuration"""
-        if preset == "center_80":
-            # Center zone with 80% of screen size
-            width = int(self.screen_width * 0.8)
-            height = int(self.screen_height * 0.8)
+    def center_zone(self):
+        """Center the zone based on current dimensions"""
+        try:
+            width = int(self.width_var.get())
+            height = int(self.height_var.get())
+            
+            # Calculate center position
             x = (self.screen_width - width) // 2
             y = (self.screen_height - height) // 2
-        elif preset == "left_half":
-            # Left half of screen
-            width = self.screen_width // 2
+            
+            # Check if centering is pixel-perfect
+            x_perfect = (self.screen_width - width) % 2 == 0
+            y_perfect = (self.screen_height - height) % 2 == 0
+            
+            # Update position info
+            if x_perfect and y_perfect:
+                self.pos_info_var.set("✓ Pixel-perfect centering")
+            else:
+                self.pos_info_var.set("! Centering offset by 1px")
+            
+            # Update position variables
+            self.x_var.set(str(x))
+            self.y_var.set(str(y))
+            
+            # Update preview if active
+            if self.overlay_hwnd:
+                self.preview_zone()
+                
+        except ValueError:
+            messagebox.showerror("Error", "Invalid dimensions")
+    
+    def apply_preset(self, preset: str):
+        """Apply a preset zone configuration"""
+        if preset == "80_percent":
+            width = int(self.screen_width * 0.8)
+            height = int(self.screen_height * 0.8)
+        elif preset == "90_percent":
+            width = int(self.screen_width * 0.9)
+            height = int(self.screen_height * 0.9)
+        elif preset == "full_screen":
+            width = self.screen_width
             height = self.screen_height
-            x = 0
-            y = 0
-        elif preset == "right_half":
-            # Right half of screen
-            width = self.screen_width // 2
-            height = self.screen_height
-            x = self.screen_width // 2
-            y = 0
         
-        self.x_var.set(str(x))
-        self.y_var.set(str(y))
         self.width_var.set(str(width))
         self.height_var.set(str(height))
+        
+        # Auto-center after applying preset
+        self.center_zone()
         
         # Update preview
         self.preview_zone()
@@ -344,10 +368,12 @@ class ZoneDesigner:
             return
         
         try:
-            x = int(self.x_var.get())
-            y = int(self.y_var.get())
             width = int(self.width_var.get())
             height = int(self.height_var.get())
+            
+            # Get current position (either from centering or existing values)
+            x = int(self.x_var.get())
+            y = int(self.y_var.get())
             
             # Validate dimensions
             if width <= 0 or height <= 0:
@@ -362,7 +388,7 @@ class ZoneDesigner:
                 messagebox.showerror("Error", "Zone extends beyond screen boundaries")
                 return
             
-            # Save zone
+            # Save zone with the same structure as before
             self.zones[name] = {
                 "name": name,
                 "description": self.desc_var.get().strip(),
@@ -378,6 +404,33 @@ class ZoneDesigner:
             
         except ValueError:
             messagebox.showerror("Error", "Invalid numeric values")
+
+    def update_position_info(self):
+        """Update the position info display based on current values"""
+        try:
+            width = int(self.width_var.get())
+            height = int(self.height_var.get())
+            x = int(self.x_var.get())
+            y = int(self.y_var.get())
+            
+            # Check if position matches center calculation
+            center_x = (self.screen_width - width) // 2
+            center_y = (self.screen_height - height) // 2
+            
+            if x == center_x and y == center_y:
+                # Check if centering is pixel-perfect
+                x_perfect = (self.screen_width - width) % 2 == 0
+                y_perfect = (self.screen_height - height) % 2 == 0
+                
+                if x_perfect and y_perfect:
+                    self.pos_info_var.set("✓ Pixel-perfect centering")
+                else:
+                    self.pos_info_var.set("! Centering offset by 1px")
+            else:
+                self.pos_info_var.set(f"Position: ({x}, {y})")
+                
+        except ValueError:
+            self.pos_info_var.set("Invalid values")
 
 def main():
     root = tk.Tk()
