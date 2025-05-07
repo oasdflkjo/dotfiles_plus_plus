@@ -1,17 +1,8 @@
 # Need to be handeled
 
-0.
-then we want to add the nice grey snapping zone with rounded corners
+0. 
 
-then we want to make layout editor
-
-and wrap it as one program that runs on the background 
-
-i dont know yet what ux flow i want for this
-shift snap new window to zone
-
-open editor
-snap without offsets  <- this 100% !!!!!!
+1.
 
 
 # UX flow
@@ -25,18 +16,15 @@ gg ez
 
 # Nice to haves 
 
-0. 
-catch window creation -> center window without flicker
+1. catch window creation -> center window without flicker
 
-1.
-support multiple zones
+1. shift snap to grey zone like in fanzy zone
 
-2.
-multiple monitor support
+1. support multiple zones
 
-2.
-things become real waky when monitors have different scaling. RIP
-or when ppl connect to external monitors ect. i think we are in for a ride here :D
+1. multiple monitor support
+
+1. things become real waky when monitors have different scaling or when ppl connect to external monitors ect. I think we are in for a ride here :D
 
 
 
