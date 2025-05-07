@@ -1,0 +1,18 @@
+{
+    "clock_font_size": 60,
+    "date_font_size": 14,
+    "font_color": "#5D5D5D",
+    "font_opacity": 0.35,
+    "clock_is_bold": false,
+    "show_seconds": false,
+    "time_format": "%H:%M",
+    "date_format": "%A %d/%m/%Y",
+    "update_interval": 1.0,
+    "vertical_spacing": 10,
+    "bg_color": "#405060",
+    "bg_opacity": 0.0,
+    "window_position": {
+        "x": 3115,
+        "y": 1290
+    }
+}

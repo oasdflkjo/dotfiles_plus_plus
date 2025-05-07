@@ -1,0 +1,19 @@
+{
+    "label_font_size": 14,
+    "font_color": "#5D5D5D",
+    "font_opacity": 0.35,
+    "show_label": true,
+    "update_interval": 60.0,
+    "spacing": 5,
+    "bg_color": "black",
+    "bg_opacity": 0.01,
+    "padding_x": 0,
+    "padding_y": 0,
+    "border_radius": 0,
+    "email": "",
+    "password": "",
+    "window_position": {
+        "x": 3173,
+        "y": 1229
+    }
+}
