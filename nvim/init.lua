@@ -338,6 +338,27 @@ lspconfig.clangd.setup({
     end,
 })
 
+-- Python LSP setup
+lspconfig.pyright.setup({
+    cmd = { "pyright-langserver", "--stdio" },
+    filetypes = { "python" },
+    root_dir = function(fname)
+        return lspconfig.util.root_pattern(
+            'pyproject.toml',
+            'setup.py',
+            'setup.cfg',
+            'requirements.txt',
+            'Pipfile',
+            'pyrightconfig.json',
+            '.git'
+        )(fname) or vim.fn.getcwd()
+    end,
+    on_attach = function(_, bufnr)
+        -- Enable completion triggered by <c-x><c-o>
+        vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+    end,
+})
+
 -- Setup cmp
 local cmp = require("cmp")
 
@@ -356,7 +377,7 @@ cmp.setup({
 
 -- Treesitter config
 require("nvim-treesitter.configs").setup({
-  ensure_installed = { "c", "lua", "vim" },
+  ensure_installed = { "c", "lua", "vim", "python" },
   highlight = {
     enable = true,
     additional_vim_regex_highlighting = false,
