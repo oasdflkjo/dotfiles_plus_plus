@@ -52,5 +52,10 @@
     "process_name": "ApplicationFrameHost.exe",
     "class_name": "ApplicationFrameWindow",
     "title_substring": "Paint 3d"
+  },
+  {
+    "name": "discord",
+    "process_name": "Discord.exe",
+    "class_name": "Chrome_WidgetWin_1"
   }
 ]
