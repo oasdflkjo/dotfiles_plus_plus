@@ -1,4 +1,4 @@
-# Windows Ricing Configuration
+# Dotfiles++
 
 ![Desktop Screenshot](image1.png)
 
@@ -24,7 +24,9 @@ This repository contains configuration files for customizing Windows with a "min
 - PowerShell profile with symlink
 - Neovim config with symlink
 - Scripts run at Windows startup
-- 2 Custom Python gui tools for RICING
+- 2 custom Python tools for gui customisation
+  - Window manager
+  - Hud
 
 ## Features
 - Python implementation of rain meter like hud framework
