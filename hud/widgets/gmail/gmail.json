@@ -1,7 +1,7 @@
 {
     "label_font_size": 14,
     "font_color": "#5D5D5D",
-    "font_opacity": 1.0,
+    "font_opacity": 0.35,
     "show_label": true,
     "update_interval": 60.0,
     "spacing": 5,
@@ -13,7 +13,7 @@
     "email": "",
     "password": "",
     "window_position": {
-        "x": 3122,
-        "y": 1170
+        "x": 3141,
+        "y": 1197
     }
 }
