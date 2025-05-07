@@ -6,10 +6,9 @@ import win32api
 import win32con
 import psutil
 import keyboard
-import tkinter as tk
-from gui import TaggerGUI
+from tagger_interface import TaggerInterface
 
-class WindowTagger:
+class WindowTagger(TaggerInterface):
     def __init__(self):
         self.definitions_file = "tag_definitions.json"
         self.offsets_file = "tag_offsets.json"
@@ -286,6 +285,9 @@ class WindowTagger:
     
     def show_tag_dialog(self):
         """Show the tag dialog"""
+        # This method is not part of the interface as it's GUI-specific
+        from gui import TaggerGUI
+        import tkinter as tk
         root = tk.Tk()
         app = TaggerGUI(root, self)
         root.mainloop()
