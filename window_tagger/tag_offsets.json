@@ -28,5 +28,11 @@
     "y_offset": 0,
     "width_offset": 2,
     "height_offset": 1
+  },
+  "spotify": {
+    "x_offset": 5,
+    "y_offset": 0,
+    "width_offset": -10,
+    "height_offset": -6
   }
 }

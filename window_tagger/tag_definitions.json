@@ -1,7 +1,8 @@
 [
   {
     "name": "cursor",
-    "process_name": "cursor.exe"
+    "process_name": "cursor.exe",
+    "class_name": "Chrome_WidgetWin_1"
   },
   {
     "name": "notepad",
@@ -34,12 +35,7 @@
   },
   {
     "name": "spotify",
-    "process_name": "spotify.exe",
-    "class_name": "Chrome_WidgetWin_1"
-  },
-  {
-    "name": "cursor",
-    "process_name": "cursor.exe"
+    "process_name": "spotify.exe"
   },
   {
     "name": "explorer",
