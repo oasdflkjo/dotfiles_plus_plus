@@ -7,28 +7,28 @@
 ![Desktop Screenshot](image3.png)
 
 ## Overview
-This repository contains configuration files for customizing Windows with a minimal and efficient setup.
+This repository contains configuration files for customizing Windows with a "minimal" setup.
 
 ## Main Components
 - **WezTerm** - Terminal emulator
 - **PowerShell** - Shell environment
 - **Neovim** - Text editor
-- **AutoHotkey** - Keyboard shortcuts and automation
-- **Taskbar Hider** - Minimal desktop experience
-- **Rainmeter** - With custom Python Gmail unread notifier
+- **Python 3.13.3**
+  - PyQt5
+  - imapclient
+  - psutil
+  - keyboard
+  - pywin32
 
 ## Setup
 - PowerShell profile with symlink
 - Neovim config with symlink
 - Scripts run at Windows startup
-- window_manager.py is currently brute force but is manageable
+- 2 Custom Python gui tools for RICING
 
 ## Features
-- Python implementation of fanzy zones style snap to zone windowing
-
-- Goal is to have predefined layouts so that certain window environment can be created and it looks same every time
-
-- Wezterm could be utilized better
+- Python implementation of rain meter like hud framework
+- Python window manager that handles window tagging and pixel perfect adjustments when snapping to zones
 
 ## General tips for WIN11 (mandatory ;))
 

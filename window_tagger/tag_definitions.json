@@ -57,5 +57,10 @@
     "name": "discord",
     "process_name": "Discord.exe",
     "class_name": "Chrome_WidgetWin_1"
+  },
+  {
+    "name": "zen",
+    "process_name": "zen.exe",
+    "class_name": "MozillaWindowClass"
   }
 ]
