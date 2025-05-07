@@ -8,7 +8,7 @@ class TaggerGUI:
         self.tagger = tagger
         
         self.root.title("Window Tagger")
-        self.root.geometry("400x500")
+        self.root.geometry("400x650")  # Made taller for the adjustment buttons
         
         # Get active window info
         self.window_info = self.tagger.get_active_window_info()
@@ -52,32 +52,59 @@ class TaggerGUI:
         self.use_class_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(tag_frame, text="Match Class Name", variable=self.use_class_var).grid(row=2, column=0, columnspan=2, sticky=tk.W)
         
+        # Title matching section
+        title_frame = ttk.Frame(tag_frame)
+        title_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        
         self.use_title_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(tag_frame, text="Match Window Title", variable=self.use_title_var).grid(row=3, column=0, columnspan=2, sticky=tk.W)
+        ttk.Checkbutton(title_frame, text="Match Title", variable=self.use_title_var).grid(row=0, column=0, sticky=tk.W)
+        
+        self.title_substring_var = tk.StringVar()
+        self.title_entry = ttk.Entry(title_frame, textvariable=self.title_substring_var)
+        self.title_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5)
         
         # Offset section
         offset_frame = ttk.LabelFrame(main_frame, text="Window Offsets", padding="5")
         offset_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10)
         
         # X offset
-        ttk.Label(offset_frame, text="X Offset:").grid(row=0, column=0, sticky=tk.W)
+        x_frame = ttk.Frame(offset_frame)
+        x_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2)
+        ttk.Label(x_frame, text="X Offset:").grid(row=0, column=0, sticky=tk.W)
         self.x_offset_var = tk.StringVar(value="0")
-        ttk.Entry(offset_frame, textvariable=self.x_offset_var, width=10).grid(row=0, column=1, sticky=tk.W)
+        ttk.Entry(x_frame, textvariable=self.x_offset_var, width=10).grid(row=0, column=1, sticky=tk.W)
+        ttk.Button(x_frame, text="-1", command=lambda: self.adjust_offset("x", -1)).grid(row=0, column=2, padx=2)
+        ttk.Button(x_frame, text="+1", command=lambda: self.adjust_offset("x", 1)).grid(row=0, column=3, padx=2)
         
         # Y offset
-        ttk.Label(offset_frame, text="Y Offset:").grid(row=1, column=0, sticky=tk.W)
+        y_frame = ttk.Frame(offset_frame)
+        y_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2)
+        ttk.Label(y_frame, text="Y Offset:").grid(row=0, column=0, sticky=tk.W)
         self.y_offset_var = tk.StringVar(value="0")
-        ttk.Entry(offset_frame, textvariable=self.y_offset_var, width=10).grid(row=1, column=1, sticky=tk.W)
+        ttk.Entry(y_frame, textvariable=self.y_offset_var, width=10).grid(row=0, column=1, sticky=tk.W)
+        ttk.Button(y_frame, text="-1", command=lambda: self.adjust_offset("y", -1)).grid(row=0, column=2, padx=2)
+        ttk.Button(y_frame, text="+1", command=lambda: self.adjust_offset("y", 1)).grid(row=0, column=3, padx=2)
         
         # Width offset
-        ttk.Label(offset_frame, text="Width Offset:").grid(row=2, column=0, sticky=tk.W)
+        width_frame = ttk.Frame(offset_frame)
+        width_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2)
+        ttk.Label(width_frame, text="Width Offset:").grid(row=0, column=0, sticky=tk.W)
         self.width_offset_var = tk.StringVar(value="0")
-        ttk.Entry(offset_frame, textvariable=self.width_offset_var, width=10).grid(row=2, column=1, sticky=tk.W)
+        ttk.Entry(width_frame, textvariable=self.width_offset_var, width=10).grid(row=0, column=1, sticky=tk.W)
+        ttk.Button(width_frame, text="-1", command=lambda: self.adjust_offset("width", -1)).grid(row=0, column=2, padx=2)
+        ttk.Button(width_frame, text="+1", command=lambda: self.adjust_offset("width", 1)).grid(row=0, column=3, padx=2)
         
         # Height offset
-        ttk.Label(offset_frame, text="Height Offset:").grid(row=3, column=0, sticky=tk.W)
+        height_frame = ttk.Frame(offset_frame)
+        height_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2)
+        ttk.Label(height_frame, text="Height Offset:").grid(row=0, column=0, sticky=tk.W)
         self.height_offset_var = tk.StringVar(value="0")
-        ttk.Entry(offset_frame, textvariable=self.height_offset_var, width=10).grid(row=3, column=1, sticky=tk.W)
+        ttk.Entry(height_frame, textvariable=self.height_offset_var, width=10).grid(row=0, column=1, sticky=tk.W)
+        ttk.Button(height_frame, text="-1", command=lambda: self.adjust_offset("height", -1)).grid(row=0, column=2, padx=2)
+        ttk.Button(height_frame, text="+1", command=lambda: self.adjust_offset("height", 1)).grid(row=0, column=3, padx=2)
+        
+        # Reset button
+        ttk.Button(offset_frame, text="Reset Offsets", command=self.reset_offsets).grid(row=4, column=0, columnspan=2, pady=5)
         
         # Buttons
         button_frame = ttk.Frame(main_frame)
@@ -94,7 +121,87 @@ class TaggerGUI:
         main_frame.columnconfigure(1, weight=1)
         tag_frame.columnconfigure(1, weight=1)
         offset_frame.columnconfigure(1, weight=1)
+        title_frame.columnconfigure(1, weight=1)
         
+    def adjust_offset(self, offset_type: str, delta: int):
+        """Adjust a specific offset and update the window"""
+        try:
+            # Get current value
+            if offset_type == "x":
+                current = int(self.x_offset_var.get())
+                self.x_offset_var.set(str(current + delta))
+            elif offset_type == "y":
+                current = int(self.y_offset_var.get())
+                self.y_offset_var.set(str(current + delta))
+            elif offset_type == "width":
+                current = int(self.width_offset_var.get())
+                self.width_offset_var.set(str(current + delta))
+            elif offset_type == "height":
+                current = int(self.height_offset_var.get())
+                self.height_offset_var.set(str(current + delta))
+            
+            # Center window with new offsets
+            self.center_window()
+            
+            # Save the new offsets
+            tag_name = self.tag_name_var.get().strip()
+            if tag_name:
+                try:
+                    x_offset = int(self.x_offset_var.get())
+                    y_offset = int(self.y_offset_var.get())
+                    width_offset = int(self.width_offset_var.get())
+                    height_offset = int(self.height_offset_var.get())
+                    
+                    self.tagger.save_offset(tag_name, x_offset, y_offset, width_offset, height_offset)
+                    print(f"Saved offsets for tag '{tag_name}'")
+                except ValueError:
+                    print("Invalid offset values")
+            
+        except ValueError:
+            print("Invalid offset value")
+    
+    def reset_offsets(self):
+        """Reset all offsets to zero"""
+        self.x_offset_var.set("0")
+        self.y_offset_var.set("0")
+        self.width_offset_var.set("0")
+        self.height_offset_var.set("0")
+        self.center_window()
+        
+        # Save the reset offsets
+        tag_name = self.tag_name_var.get().strip()
+        if tag_name:
+            self.tagger.save_offset(tag_name, 0, 0, 0, 0)
+            print(f"Reset and saved offsets for tag '{tag_name}'")
+    
+    def center_window(self):
+        """Center the window with current offsets"""
+        try:
+            # Get current offsets
+            x_offset = int(self.x_offset_var.get())
+            y_offset = int(self.y_offset_var.get())
+            width_offset = int(self.width_offset_var.get())
+            height_offset = int(self.height_offset_var.get())
+            
+            # Get centered zone
+            centered = self.tagger.get_centered_zone()
+            
+            # Position window with offsets
+            self.tagger.position_window_with_offsets(
+                self.window_info["hwnd"],
+                centered.get("x", 0),
+                centered.get("y", 0),
+                centered.get("width", 0),
+                centered.get("height", 0),
+                x_offset,
+                y_offset,
+                width_offset,
+                height_offset
+            )
+            
+        except ValueError:
+            print("Invalid offset values")
+    
     def load_existing_tag_info(self):
         """Load existing tag information if available"""
         tag_info = self.tagger.get_existing_tag_info(self.window_info)
@@ -105,6 +212,24 @@ class TaggerGUI:
             self.y_offset_var.set(str(offsets.get("y_offset", 0)))
             self.width_offset_var.set(str(offsets.get("width_offset", 0)))
             self.height_offset_var.set(str(offsets.get("height_offset", 0)))
+            
+            # Find the matching tag definition to set checkboxes
+            for tag in self.tagger.definitions:
+                if tag.get("name") == tag_name:
+                    # Set process name checkbox
+                    self.use_process_var.set(tag.get("process_name") is not None)
+                    
+                    # Set class name checkbox
+                    self.use_class_var.set(tag.get("class_name") is not None)
+                    
+                    # Set title matching checkbox and substring
+                    if tag.get("title_substring"):
+                        self.use_title_var.set(True)
+                        self.title_substring_var.set(tag.get("title_substring"))
+                    else:
+                        self.use_title_var.set(False)
+                        self.title_substring_var.set("")
+                    break
     
     def save_tag(self):
         """Save the tag definition and offsets"""
@@ -118,8 +243,13 @@ class TaggerGUI:
             "name": tag_name,
             "process_name": self.window_info["process_name"] if self.use_process_var.get() else None,
             "class_name": self.window_info["class_name"] if self.use_class_var.get() else None,
-            "window_title": self.window_info["window_title"] if self.use_title_var.get() else None
         }
+        
+        # Add title substring if enabled and provided
+        if self.use_title_var.get():
+            title_substring = self.title_substring_var.get().strip()
+            if title_substring:
+                tag_definition["title_substring"] = title_substring
         
         # Save tag definition
         self.tagger.save_tag_definition(tag_definition)

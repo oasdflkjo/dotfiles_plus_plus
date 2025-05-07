@@ -34,5 +34,11 @@
     "y_offset": 0,
     "width_offset": -10,
     "height_offset": -6
+  },
+  "paint 3d": {
+    "x_offset": -1,
+    "y_offset": 0,
+    "width_offset": 2,
+    "height_offset": 1
   }
 }

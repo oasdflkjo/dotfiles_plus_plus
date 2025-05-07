@@ -107,13 +107,19 @@ class WindowTagger(TaggerInterface):
     
     def save_definitions(self):
         """Save window definitions to JSON file"""
-        os.makedirs(os.path.dirname(self.definitions_file), exist_ok=True)
+        # Only create directory if the file path contains a directory
+        dirname = os.path.dirname(self.definitions_file)
+        if dirname:  # Only create directory if there is a path component
+            os.makedirs(dirname, exist_ok=True)
         with open(self.definitions_file, "w") as f:
             json.dump(self.definitions, f, indent=2)
     
     def save_offsets(self):
         """Save window offsets to JSON file"""
-        os.makedirs(os.path.dirname(self.offsets_file), exist_ok=True)
+        # Only create directory if the file path contains a directory
+        dirname = os.path.dirname(self.offsets_file)
+        if dirname:  # Only create directory if there is a path component
+            os.makedirs(dirname, exist_ok=True)
         with open(self.offsets_file, "w") as f:
             json.dump(self.offsets, f, indent=2)
     
@@ -227,10 +233,12 @@ class WindowTagger(TaggerInterface):
                 if tag.get("class_name") != window_info.get("class_name", ""):
                     continue
                 
-            # Check window title if specified (partial match)
-            if tag.get("window_title"):
-                print(f"Debug - Comparing with tag title: {tag.get('window_title')}")  # Debug print
-                if tag.get("window_title") not in window_info.get("window_title", ""):
+            # Check title substring if specified
+            if tag.get("title_substring"):
+                print(f"Debug - Comparing with tag title substring: {tag.get('title_substring')}")  # Debug print
+                window_title = window_info.get("window_title", "").lower()
+                title_substring = tag.get("title_substring").lower()
+                if title_substring not in window_title:
                     continue
                 
             # If we get here, all specified criteria match

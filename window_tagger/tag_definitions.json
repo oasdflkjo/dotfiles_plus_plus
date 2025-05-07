@@ -40,5 +40,17 @@
   {
     "name": "explorer",
     "process_name": "explorer.exe"
+  },
+  {
+    "name": "paint 3D",
+    "process_name": "ApplicationFrameHost.exe",
+    "class_name": "ApplicationFrameWindow",
+    "title_substring": "Paint 3D"
+  },
+  {
+    "name": "paint 3d",
+    "process_name": "ApplicationFrameHost.exe",
+    "class_name": "ApplicationFrameWindow",
+    "title_substring": "Paint 3d"
   }
 ]
