@@ -81,7 +81,7 @@ class BaseWidget(QMainWindow):
             self._setup_desktop_window()
 
     def _setup_desktop_window(self):
-        """Set up window specifically to stay visible during Win+D"""
+        """Set up window specifically to stay behind other windows (bottommost)"""
         if not HAS_WIN32_MODULES or not os.name == "nt":
             return
 
@@ -96,13 +96,6 @@ class BaseWidget(QMainWindow):
             ex_style &= ~win32con.WS_EX_APPWINDOW  # Not an app window
             win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
 
-            # Find WorkerW window which is the actual desktop
-            progman = win32gui.FindWindow("Progman", None)
-
-            # Use a simplified approach - just place on desktop
-            # This is less likely to cause issues
-            desktop_hwnd = win32gui.GetDesktopWindow()
-
             # Set style for visibility
             style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
             style |= win32con.WS_VISIBLE  # Make sure it's visible
@@ -112,10 +105,10 @@ class BaseWidget(QMainWindow):
             # Make sure it's visible
             win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
 
-            # Set the window as topmost
+            # Set the window as bottommost (behind all other windows)
             win32gui.SetWindowPos(
                 hwnd,
-                win32con.HWND_TOPMOST,
+                win32con.HWND_BOTTOM,  # BOTTOM instead of TOPMOST
                 0,
                 0,
                 0,
@@ -208,10 +201,10 @@ class BaseWidget(QMainWindow):
                 # Just use the simple ShowWindow command
                 win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
 
-                # Make sure it's on top
+                # Make sure it stays bottommost
                 win32gui.SetWindowPos(
                     hwnd,
-                    win32con.HWND_TOPMOST,
+                    win32con.HWND_BOTTOM,  # BOTTOM instead of TOPMOST
                     0,
                     0,
                     0,

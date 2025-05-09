@@ -161,7 +161,18 @@ class WidgetManager(QObject):
                 win32gui.SetWindowLong(hwnd, win32con.GWL_STYLE, style)
 
                 # Just make sure the window is visible - avoid complex operations
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
+
+                # Set as bottommost window
+                win32gui.SetWindowPos(
+                    hwnd,
+                    win32con.HWND_BOTTOM,  # BOTTOM instead of TOPMOST
+                    0,
+                    0,
+                    0,
+                    0,  # Don't change position or size
+                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
+                )
 
                 print(f"Desktop window behavior set for {name}")
             except Exception as e:
