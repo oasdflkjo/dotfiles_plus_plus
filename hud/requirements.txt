@@ -1,0 +1,4 @@
+PyQt5>=5.15.0
+pywin32>=228
+imapclient>=2.2.0
+psutil>=5.9.0 
