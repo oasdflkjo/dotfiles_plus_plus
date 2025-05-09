@@ -208,76 +208,15 @@ vim.api.nvim_create_autocmd("CmdlineEnter", {
   end,
 })
 
--- Enable syntax highlighting (still used in some cases)
+-- Enable syntax highlighting (this should be all you need)
 vim.cmd("syntax enable")
+
+-- Make sure filetype detection is on
+vim.cmd("filetype plugin indent on")
 
 -- Remember last opened file
 vim.opt.shada = "!,'1000,<50,s10,h"
 
--- Simple last file tracking
-local last_file_path = vim.fn.stdpath("data") .. "/last_file.txt"
-
--- Save the current file when leaving
-vim.api.nvim_create_autocmd({"BufWinLeave", "VimLeave"}, {
-  pattern = "*",
-  callback = function()
-    local current_file = vim.fn.expand("%:p")
-    -- Only save if it's a real file (not NvimTree, empty buffer, etc)
-    if current_file ~= "" and vim.fn.filereadable(current_file) == 1 and 
-       vim.bo.buftype == "" and vim.fn.expand("%") ~= "NvimTree_1" then
-      local file = io.open(last_file_path, "w")
-      if file then
-        file:write(current_file)
-        file:close()
-      end
-    end
-  end
-})
-
--- Restore the last file on startup
-vim.api.nvim_create_autocmd("VimEnter", {
-  pattern = "*",
-  nested = true,
-  callback = function()
-    -- Only restore if no files were specified on the command line
-    if vim.fn.argc() == 0 then
-      -- Try to read the last file
-      local file = io.open(last_file_path, "r")
-      if file then
-        local last_file = file:read("*l")
-        file:close()
-        
-        -- Only try to open if the file exists
-        if last_file and vim.fn.filereadable(last_file) == 1 then
-          -- Close NvimTree if it opened automatically
-          if pcall(require, "nvim-tree") then
-            vim.cmd("NvimTreeClose")
-          end
-          
-          -- Open the last file
-          vim.cmd("edit " .. vim.fn.fnameescape(last_file))
-          
-          -- Set cursor position to where it was
-          vim.cmd("normal! g`\"")
-          
-          if vim.g.neovide then
-            vim.defer_fn(function()
-              -- Ensure the editor shows the file, not NvimTree
-              if vim.bo.filetype == "NvimTree" then
-                vim.cmd("wincmd l")
-              end
-            end, 100)
-          end
-        end
-      else
-        -- If no last file, show NvimTree
-        if pcall(require, "nvim-tree") then
-          vim.cmd("NvimTreeOpen")
-        end
-      end
-    end
-  end
-})
 
 -- Indentation settings
 vim.o.tabstop = 4
@@ -338,27 +277,6 @@ lspconfig.clangd.setup({
     end,
 })
 
--- Python LSP setup
-lspconfig.pyright.setup({
-    cmd = { "pyright-langserver", "--stdio" },
-    filetypes = { "python" },
-    root_dir = function(fname)
-        return lspconfig.util.root_pattern(
-            'pyproject.toml',
-            'setup.py',
-            'setup.cfg',
-            'requirements.txt',
-            'Pipfile',
-            'pyrightconfig.json',
-            '.git'
-        )(fname) or vim.fn.getcwd()
-    end,
-    on_attach = function(_, bufnr)
-        -- Enable completion triggered by <c-x><c-o>
-        vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
-    end,
-})
-
 -- Setup cmp
 local cmp = require("cmp")
 
@@ -375,12 +293,13 @@ cmp.setup({
   }),
 })
 
--- Treesitter config
+-- Treesitter config - simplified
 require("nvim-treesitter.configs").setup({
-  ensure_installed = { "c", "lua", "vim", "python" },
+  ensure_installed = { "c", "cpp", "lua", "vim", "python" },
+  sync_install = false,
+  auto_install = true,
   highlight = {
-    enable = true,
-    additional_vim_regex_highlighting = false,
+    enable = true,  -- This is the key setting for syntax highlighting
   },
 })
 
@@ -724,3 +643,21 @@ vim.api.nvim_create_autocmd("BufWritePre", {
         })
     end,
 })
+
+-- Simple utility function to force syntax highlighting
+vim.api.nvim_create_user_command("FixSyntax", function()
+  -- Reset and enable syntax highlighting
+  vim.cmd("syntax off")
+  vim.cmd("syntax on")
+  
+  -- Force filetype detection
+  vim.cmd("filetype detect")
+  
+  -- If Treesitter is available, try to enable it
+  pcall(function() vim.cmd("TSEnable highlight") end)
+  
+  print("Syntax highlighting has been reset and enabled")
+end, {})
+
+-- Set Python path (update this to your Python installation path if needed)
+vim.g.python3_host_prog = vim.fn.exepath('python')
