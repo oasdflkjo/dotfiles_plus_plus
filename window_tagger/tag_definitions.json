@@ -1,7 +1,7 @@
 [
   {
     "name": "cursor",
-    "process_name": "cursor.exe",
+    "process_name": "Cursor.exe",
     "class_name": "Chrome_WidgetWin_1"
   },
   {
@@ -62,5 +62,15 @@
     "name": "zen",
     "process_name": "zen.exe",
     "class_name": "MozillaWindowClass"
+  },
+  {
+    "name": "everything",
+    "process_name": "Everything.exe",
+    "class_name": "EVERYTHING"
+  },
+  {
+    "name": "windowsterminal",
+    "process_name": "WindowsTerminal.exe",
+    "class_name": "CASCADIA_HOSTING_WINDOW_CLASS"
   }
 ]

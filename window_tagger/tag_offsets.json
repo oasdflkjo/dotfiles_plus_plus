@@ -1,8 +1,8 @@
 {
   "cursor": {
-    "x_offset": 6,
+    "x_offset": 5,
     "y_offset": 0,
-    "width_offset": -12,
+    "width_offset": -11,
     "height_offset": -6
   },
   "notepad": {
@@ -52,5 +52,23 @@
     "y_offset": 0,
     "width_offset": 2,
     "height_offset": 1
+  },
+  "steam": {
+    "x_offset": 5,
+    "y_offset": 0,
+    "width_offset": -11,
+    "height_offset": -6
+  },
+  "everything": {
+    "x_offset": 0,
+    "y_offset": 0,
+    "width_offset": 0,
+    "height_offset": 0
+  },
+  "windowsterminal": {
+    "x_offset": 0,
+    "y_offset": 0,
+    "width_offset": 0,
+    "height_offset": 0
   }
 }
