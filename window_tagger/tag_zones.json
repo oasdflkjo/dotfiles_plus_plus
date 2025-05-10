@@ -1,0 +1,38 @@
+{
+  "cursor": {
+    "default_zone": "centered"
+  },
+  "notepad": {
+    "default_zone": "centered"
+  },
+  "chrome": {
+    "default_zone": "centered"
+  },
+  "wezterm": {
+    "default_zone": "centered"
+  },
+  "explorer": {
+    "default_zone": "centered"
+  },
+  "spotify": {
+    "default_zone": "centered"
+  },
+  "paint 3d": {
+    "default_zone": "centered"
+  },
+  "discord": {
+    "default_zone": "centered"
+  },
+  "steam": {
+    "default_zone": "centered"
+  },
+  "everything": {
+    "default_zone": "centered"
+  },
+  "windowsterminal": {
+    "default_zone": "centered"
+  },
+  "zen": {
+    "default_zone": "centered"
+  }
+}
