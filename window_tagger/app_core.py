@@ -20,23 +20,6 @@ class WindowTagger(TaggerInterface):
         self.zones = self.load_zones()
         self.tag_zones = self.load_tag_zones()
 
-        # Taskbar state
-        self.taskbar_hidden = False
-        self.taskbar_window = None
-
-        # Register hotkeys
-        keyboard.add_hotkey("ctrl+alt+t", self.show_tag_dialog)
-        keyboard.add_hotkey("win+c", self.center_active_window_with_tag)
-        keyboard.add_hotkey("win+f12", self.toggle_taskbar)
-
-        print("Hotkeys registered:")
-        print("  Ctrl+Alt+T: Open tagging interface")
-        print("  Win+C: Center active window (if it has a tag definition)")
-        print("  Win+F12: Toggle taskbar visibility")
-
-        # Hide taskbar on startup
-        self.hide_taskbar_on_startup()
-
     def load_definitions(self):
         """Load window definitions from JSON file"""
         if os.path.exists(self.definitions_file):
@@ -388,33 +371,6 @@ class WindowTagger(TaggerInterface):
         app = TaggerGUI(root, self)
         root.mainloop()
 
-    def toggle_taskbar(self):
-        """Toggle the visibility of the Windows taskbar"""
-        # Find taskbar window if not already found
-        if not self.taskbar_window:
-            self.taskbar_window = win32gui.FindWindow("Shell_TrayWnd", None)
-            if not self.taskbar_window:
-                print("Taskbar window not found")
-                return
-
-        # Toggle visibility
-        if self.taskbar_hidden:
-            win32gui.ShowWindow(self.taskbar_window, win32con.SW_SHOW)
-            self.taskbar_hidden = False
-            print("Taskbar shown")
-        else:
-            win32gui.ShowWindow(self.taskbar_window, win32con.SW_HIDE)
-            self.taskbar_hidden = True
-            print("Taskbar hidden")
-
-    def hide_taskbar_on_startup(self):
-        """Hide the taskbar when the application starts"""
-        self.taskbar_window = win32gui.FindWindow("Shell_TrayWnd", None)
-        if self.taskbar_window:
-            win32gui.ShowWindow(self.taskbar_window, win32con.SW_HIDE)
-            self.taskbar_hidden = True
-            print("Taskbar hidden on startup")
-
     def run(self):
         """Run the application"""
         print("Window Tagger running in background.")
@@ -425,6 +381,3 @@ class WindowTagger(TaggerInterface):
             keyboard.wait()
         except KeyboardInterrupt:
             print("Exiting...")
-            # Show taskbar before exiting
-            if self.taskbar_hidden and self.taskbar_window:
-                win32gui.ShowWindow(self.taskbar_window, win32con.SW_SHOW)

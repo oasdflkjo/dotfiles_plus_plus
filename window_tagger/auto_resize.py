@@ -7,6 +7,7 @@ import win32api
 import win32con
 import win32process
 import psutil
+import keyboard
 from app_core import WindowTagger
 
 # Global variables
@@ -18,6 +19,10 @@ zones = {}
 tag_definitions = []
 tag_offsets = {}
 monitored_windows = set()
+
+# Taskbar state
+taskbar_hidden = False
+taskbar_window = None
 
 
 def load_configs():
@@ -306,14 +311,111 @@ def monitor_windows(tagger):
         print("Monitoring stopped")
 
 
+def toggle_taskbar():
+    """Toggle the visibility of the Windows taskbar"""
+    global taskbar_window, taskbar_hidden
+
+    # Find taskbar window if not already found
+    if not taskbar_window:
+        taskbar_window = win32gui.FindWindow("Shell_TrayWnd", None)
+        if not taskbar_window:
+            print("Taskbar window not found")
+            return
+
+    # Toggle visibility
+    if taskbar_hidden:
+        win32gui.ShowWindow(taskbar_window, win32con.SW_SHOW)
+        taskbar_hidden = False
+        print("Taskbar shown")
+    else:
+        win32gui.ShowWindow(taskbar_window, win32con.SW_HIDE)
+        taskbar_hidden = True
+        print("Taskbar hidden")
+
+
+def hide_taskbar_on_startup():
+    """Hide the taskbar when the application starts"""
+    global taskbar_window, taskbar_hidden
+    taskbar_window = win32gui.FindWindow("Shell_TrayWnd", None)
+    if taskbar_window:
+        win32gui.ShowWindow(taskbar_window, win32con.SW_HIDE)
+        taskbar_hidden = True
+        print("Taskbar hidden on startup")
+
+
+def center_active_window_with_tag(tagger):
+    """Center the active window using its tag definition if found"""
+    # Get active window info
+    window_info = tagger.get_active_window_info()
+
+    # Try to find a matching tag
+    tag_info = tagger.get_existing_tag_info(window_info)
+
+    if not tag_info:
+        print("No matching tag found for the active window.")
+        # Flash the window to indicate error
+        win32gui.FlashWindow(window_info["hwnd"], True)
+        return False
+
+    tag_name, offsets = tag_info
+
+    # Get the zone for this tag
+    zone_name = tagger.get_tag_zone(tag_name)
+    if zone_name is None:
+        print(f"Tag '{tag_name}' has no default zone set. Window will not be resized.")
+        return False
+
+    zone = zones.get(zone_name, tagger.get_centered_zone())
+
+    # Get offsets for this tag
+    x_offset = offsets.get("x_offset", 0)
+    y_offset = offsets.get("y_offset", 0)
+    width_offset = offsets.get("width_offset", 0)
+    height_offset = offsets.get("height_offset", 0)
+
+    # Apply centering with offsets
+    tagger.position_window_with_offsets(
+        window_info["hwnd"],
+        zone.get("x", 0),
+        zone.get("y", 0),
+        zone.get("width", 0),
+        zone.get("height", 0),
+        x_offset,
+        y_offset,
+        width_offset,
+        height_offset,
+    )
+
+    # Flash the window to indicate success
+    win32gui.FlashWindow(window_info["hwnd"], True)
+
+    print(f"Centered window using tag '{tag_name}' and zone '{zone_name}'")
+    return True
+
+
 def main():
     """Main function"""
-    print("Auto Resize Monitor Starting...")
+    if not load_configs():
+        print("Failed to load configurations")
+        return
 
-    # Initialize the WindowTagger (same as in the main app)
+    # Create WindowTagger instance
     tagger = WindowTagger()
 
-    # Start monitoring
+    # Register hotkeys
+    keyboard.add_hotkey("ctrl+alt+t", tagger.show_tag_dialog)
+    keyboard.add_hotkey("win+c", lambda: center_active_window_with_tag(tagger))
+    keyboard.add_hotkey("win+f12", toggle_taskbar)
+
+    print("Hotkeys registered:")
+    print("  Ctrl+Alt+T: Open tagging interface")
+    print("  Win+C: Center active window (if it has a tag definition)")
+    print("  Win+F12: Toggle taskbar visibility")
+
+    # Hide taskbar on startup
+    hide_taskbar_on_startup()
+
+    # Start monitoring windows
     monitor_windows(tagger)
 
 
