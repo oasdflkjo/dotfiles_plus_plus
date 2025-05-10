@@ -2,6 +2,8 @@
 
 A minimalist window management system that lets you tag windows and control their positioning.
 
+currently this mess starts with auto_resize.py
+
 ## Core Concept
 
 The system works by tagging windows based on their properties (process name, class name, title). Each tag can have:
@@ -18,9 +20,12 @@ The system works by tagging windows based on their properties (process name, cla
 
 ## How It Works
 
+0. Toggle taskbar (Win+F12)
+
 1. Tag a window (Ctrl+Alt+T)
    - System identifies the window's properties
    - You can choose which properties to match
+   - Substring matching for title
    - Optionally set a default zone
    - Fine-tune the position with offsets
 
@@ -28,6 +33,13 @@ The system works by tagging windows based on their properties (process name, cla
    - If the window has a default zone: positions it there
    - If no default zone: leaves it where it is
    - Applies any saved offsets
+
+3. Auto resize process
+   - runs on background
+   - monitors all windows
+   - if window has tag and default zone, resize it to the default zone during window creation
+   - if window has tag and no default zone
+   TODO: (Win+C) should prolly be part of this auto resize process cos it is essentially manual trigger for auto resize
 
 ## Files
 
