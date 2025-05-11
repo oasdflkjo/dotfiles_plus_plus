@@ -6,7 +6,8 @@
 
 ![Desktop Screenshot](image3.png)
 
-[https://studio.youtube.com/video/Io58l1ffMBA/edit](https://www.youtube.com/watch?v=Io58l1ffMBA)
+Small demo video:
+- https://www.youtube.com/watch?v=Io58l1ffMBA
 
 ## Overview
 This repository contains configuration files for customizing Windows with a "minimal" setup.
