@@ -35,8 +35,6 @@ This repository contains configuration files for customizing Windows with a "min
 
 ## General tips for WIN11 (mandatory ;))
 
-search files
+Never use the built-in Windows search cos it's absolute trash. Use Everything and its CLI counterpart es-cli.
 
-https://www.voidtools.com/
-
-everything and es-cli
+Everything: https://www.voidtools.com/
