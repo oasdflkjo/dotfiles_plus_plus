@@ -39,7 +39,6 @@ The system works by tagging windows based on their properties (process name, cla
    - monitors all windows
    - if window has tag and default zone, resize it to the default zone during window creation
    - if window has tag and no default zone
-   TODO: (Win+C) should prolly be part of this auto resize process cos it is essentially manual trigger for auto resize
 
 ## Files
 
