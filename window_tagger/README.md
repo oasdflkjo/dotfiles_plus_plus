@@ -43,9 +43,9 @@ The system works by tagging windows based on their properties (process name, cla
 ## Files
 
 - `tag_definitions.json`: Window matching rules
-- `tag_offsets.json`: Position adjustments
 - `zones.json`: Screen zones
-- `tag_zones.json`: Default zones for tags
+- `tag_zones.json`: tag to zones mapping
+- `tag_offsets.json`: tag to offset mapping
 
 ## Hotkeys
 
