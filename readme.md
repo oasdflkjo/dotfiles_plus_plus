@@ -31,6 +31,7 @@ This repository contains configuration files for customizing Windows with a "min
 ## Features
 - Python implementation of rain meter like hud framework
 - Python window manager that handles window tagging and pixel perfect adjustments when snapping to zones
+- Tagged windows get resized to their default zone at window creation
 
 ## General tips for WIN11 (mandatory ;))
 
