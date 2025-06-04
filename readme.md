@@ -6,6 +6,9 @@
 
 ![Desktop Screenshot](image3.png)
 
+Small demo video:
+- https://www.youtube.com/watch?v=Io58l1ffMBA
+
 ## Overview
 This repository contains configuration files for customizing Windows with a "minimal" setup.
 
@@ -31,11 +34,10 @@ This repository contains configuration files for customizing Windows with a "min
 ## Features
 - Python implementation of rain meter like hud framework
 - Python window manager that handles window tagging and pixel perfect adjustments when snapping to zones
+- Tagged windows get resized to their default zone at window creation
 
 ## General tips for WIN11 (mandatory ;))
 
-search files
+Never use the built-in Windows search cos it's absolute trash. Use Everything and its CLI counterpart es-cli.
 
-https://www.voidtools.com/
-
-everything and es-cli
+Everything: https://www.voidtools.com/
