@@ -9,6 +9,8 @@ import win32process
 import psutil
 import keyboard
 from app_core import WindowTagger
+from ctypes import windll, byref, sizeof, c_int
+from win32api import GetSystemMetrics
 
 # Global variables
 zones_file = "zones.json"
@@ -293,13 +295,38 @@ def enum_windows_callback(hwnd, tagger):
             print(f"Error processing window: {e}")
 
 
+def get_system_power_status():
+    """Get current system power status"""
+    SYSTEM_POWER_STATUS = c_int * 6
+    power_status = SYSTEM_POWER_STATUS()
+    windll.kernel32.GetSystemPowerStatus(byref(power_status))
+    return power_status[0]  # 0 = AC, 1 = DC, 255 = Unknown
+
+
+def handle_wake_event(tagger):
+    """Handle system wake event by rechecking all windows"""
+    global monitored_windows
+    print("System wake detected - rechecking windows...")
+    monitored_windows.clear()  # Clear monitored windows to force recheck
+    win32gui.EnumWindows(lambda hwnd, param: enum_windows_callback(hwnd, tagger), None)
+
+
 def monitor_windows(tagger):
     """Monitor for windows and apply tags to new ones"""
     print("Monitoring for new windows...")
     print("Press Ctrl+C to stop")
 
+    last_power_status = get_system_power_status()
+
     try:
         while True:
+            # Check for power status changes (sleep/wake)
+            current_power_status = get_system_power_status()
+            if current_power_status != last_power_status:
+                if current_power_status == 0:  # AC power (wake)
+                    handle_wake_event(tagger)
+                last_power_status = current_power_status
+
             # Check for new windows
             win32gui.EnumWindows(
                 lambda hwnd, param: enum_windows_callback(hwnd, tagger), None

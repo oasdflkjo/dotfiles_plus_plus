@@ -42,12 +42,6 @@
     "process_name": "explorer.exe"
   },
   {
-    "name": "paint 3D",
-    "process_name": "ApplicationFrameHost.exe",
-    "class_name": "ApplicationFrameWindow",
-    "title_substring": "Paint 3D"
-  },
-  {
     "name": "paint 3d",
     "process_name": "ApplicationFrameHost.exe",
     "class_name": "ApplicationFrameWindow",
@@ -72,5 +66,20 @@
     "name": "windowsterminal",
     "process_name": "WindowsTerminal.exe",
     "class_name": "CASCADIA_HOSTING_WINDOW_CLASS"
+  },
+  {
+    "name": "tyrian",
+    "process_name": "Tyrian2025.exe",
+    "class_name": "GLFW30"
+  },
+  {
+    "name": "photos",
+    "process_name": "Photos.exe",
+    "class_name": "WinUIDesktopWin32WindowClass"
+  },
+  {
+    "name": "capcut",
+    "process_name": "CapCut.exe",
+    "class_name": "Qt622QWindowIcon"
   }
 ]

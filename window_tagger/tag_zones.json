@@ -34,5 +34,14 @@
   },
   "zen": {
     "default_zone": "centered"
+  },
+  "tyrian": {
+    "default_zone": "centered"
+  },
+  "photos": {
+    "default_zone": "centered"
+  },
+  "capcut": {
+    "default_zone": "centered"
   }
 }
