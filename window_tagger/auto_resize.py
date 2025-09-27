@@ -9,8 +9,11 @@ import win32process
 import psutil
 import keyboard
 from app_core import WindowTagger
-from ctypes import windll, byref, sizeof, c_int
+from ctypes import windll, byref, sizeof, c_int, WINFUNCTYPE, POINTER
 from win32api import GetSystemMetrics
+import win32event
+import win32api
+import threading
 
 # Global variables
 zones_file = "zones.json"
@@ -25,6 +28,14 @@ monitored_windows = set()
 # Taskbar state
 taskbar_hidden = False
 taskbar_window = None
+
+# Debug mode - set to True to see window filtering details
+DEBUG_MODE = False
+
+# Constants for power events
+PBT_POWERSETTINGCHANGE = 0x8013
+GUID_MONITOR_POWER_ON = "{02731015-4510-4526-99E6-E5A17EBD1AEA}"
+GUID_CONSOLE_DISPLAY_STATE = "{6FE69556-704A-47A0-8F24-C28D936FDA74}"
 
 
 def load_configs():
@@ -73,23 +84,104 @@ def load_configs():
     return True
 
 
-def is_valid_window(hwnd):
+def is_valid_window(hwnd, debug=False):
     """Check if window is valid for processing"""
     if not win32gui.IsWindowVisible(hwnd):
+        if debug:
+            print(f"DEBUG: Window {hwnd} filtered - not visible")
         return False
 
     if not win32gui.IsWindow(hwnd):
+        if debug:
+            print(f"DEBUG: Window {hwnd} filtered - invalid window")
         return False
 
     # Ignore windows with no title
     title = win32gui.GetWindowText(hwnd)
     if not title:
+        if debug:
+            print(f"DEBUG: Window {hwnd} filtered - no title")
         return False
 
     # Ignore minimized windows
     if win32gui.IsIconic(hwnd):
+        if debug:
+            print(f"DEBUG: Window '{title}' filtered - minimized")
         return False
 
+    # Exclusion filters - don't resize these windows
+    exclusion_patterns = [
+        "wants to",  # Chrome permission popups
+        "Choose files",  # File dialogs
+        "Save As",  # Save dialogs
+        "Open",  # Open dialogs (be careful with this one)
+        "Print",  # Print dialogs
+        "Properties",  # Properties dialogs
+        "Preferences",  # Settings/preferences windows
+        "Settings",  # Settings windows
+        "Options",  # Options dialogs
+        "About",  # About dialogs
+    ]
+
+    # System window class exclusions - critical for preventing Alt+Tab interference
+    system_class_exclusions = [
+        "MultitaskingViewFrame",  # Windows 11 Alt+Tab switcher
+        "TaskSwitcherWnd",  # Windows 10 Alt+Tab switcher
+        "XamlExplorerHostIslandWindow",  # Windows 11 Alt+Tab switcher (newer version)
+        "Shell_TrayWnd",  # Taskbar
+        "Shell_SecondaryTrayWnd",  # Secondary taskbar (multi-monitor)
+        "DV2ControlHost",  # Windows 11 Start menu
+        "Windows.UI.Core.CoreWindow",  # UWP apps system windows
+        "ApplicationFrameWindow",  # UWP app frames
+        "Shell_InputSwitchTopLevelWindow",  # Input method switcher
+        "NotifyIconOverflowWindow",  # System tray overflow
+        "Shell_TrayWnd",  # Taskbar (duplicate but explicit)
+        "Progman",  # Program Manager (desktop)
+        "WorkerW",  # Desktop worker windows
+        "Button",  # Desktop icons
+        "Static",  # Static controls
+        "ComboBox",  # Combo boxes
+        "Edit",  # Edit controls
+        "ListBox",  # List boxes
+        "ScrollBar",  # Scroll bars
+        "msctls_progress32",  # Progress bars
+        "msctls_trackbar32",  # Track bars
+        "msctls_statusbar32",  # Status bars
+        "msctls_toolbar32",  # Toolbars
+        "msctls_hotkey32",  # Hotkey controls
+        "msctls_updown32",  # Up-down controls
+        "SysListView32",  # List views
+        "SysTreeView32",  # Tree views
+        "SysTabControl32",  # Tab controls
+        "SysAnimate32",  # Animation controls
+        "SysHeader32",  # Header controls
+        "SysMonthCal32",  # Month calendar controls
+        "SysDateTimePick32",  # Date/time picker controls
+        "SysPager",  # Pager controls
+        "SysLink",  # Link controls
+        "NativeHWNDHost",  # Native window hosts
+        "CefBrowserWindow",  # Chromium embedded framework windows
+        "Chrome_WidgetWin_1",  # Chrome browser windows (system)
+        "Chrome_WidgetWin_0",  # Chrome browser windows (system)
+    ]
+
+    # Check if title contains any exclusion pattern
+    title_lower = title.lower()
+    for pattern in exclusion_patterns:
+        if pattern.lower() in title_lower:
+            if debug:
+                print(f"DEBUG: Window '{title}' filtered - title contains '{pattern}'")
+            return False
+
+    # Check if window class is in system exclusions
+    class_name = win32gui.GetClassName(hwnd)
+    if class_name in system_class_exclusions:
+        if debug:
+            print(f"DEBUG: Window '{title}' filtered - system class '{class_name}'")
+        return False
+
+    if debug:
+        print(f"DEBUG: Window '{title}' (class: {class_name}) - VALID for processing")
     return True
 
 
@@ -219,7 +311,7 @@ def apply_zone_with_offsets(hwnd, tag_name):
 
 def enum_windows_callback(hwnd, tagger):
     """Process each window"""
-    if hwnd not in monitored_windows and is_valid_window(hwnd):
+    if hwnd not in monitored_windows and is_valid_window(hwnd, DEBUG_MODE):
         try:
             # Get window info
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
@@ -311,23 +403,65 @@ def handle_wake_event(tagger):
     win32gui.EnumWindows(lambda hwnd, param: enum_windows_callback(hwnd, tagger), None)
 
 
+def register_power_notification():
+    """Register for Windows power notifications"""
+
+    def power_callback(hwnd, msg, wparam, lparam):
+        if msg == win32con.WM_POWERBROADCAST:
+            if wparam == PBT_POWERSETTINGCHANGE:
+                # This is a power setting change event
+                return True
+        return False
+
+    # Create a window to receive power notifications
+    wc = win32gui.WNDCLASS()
+    wc.lpfnWndProc = power_callback
+    wc.lpszClassName = "PowerEventWindow"
+    win32gui.RegisterClass(wc)
+    hwnd = win32gui.CreateWindow(
+        wc.lpszClassName, "PowerEventWindow", 0, 0, 0, 0, 0, 0, 0, 0, None
+    )
+    return hwnd
+
+
+def force_window_recheck(tagger):
+    """Force a complete recheck of all windows"""
+    global monitored_windows
+    print("Forcing window recheck...")
+    monitored_windows.clear()
+    win32gui.EnumWindows(lambda hwnd, param: enum_windows_callback(hwnd, tagger), None)
+
+
+def periodic_recheck(tagger):
+    """Periodically force a window recheck"""
+    while True:
+        time.sleep(300)  # Check every 5 minutes
+        force_window_recheck(tagger)
+
+
 def monitor_windows(tagger):
     """Monitor for windows and apply tags to new ones"""
     print("Monitoring for new windows...")
     print("Press Ctrl+C to stop")
 
-    last_power_status = get_system_power_status()
+    # Register for power notifications
+    power_hwnd = register_power_notification()
+
+    # Remove periodic recheck - only resize on window open and manual hotkey
+    # recheck_thread = threading.Thread(
+    #     target=periodic_recheck, args=(tagger,), daemon=True
+    # )
+    # recheck_thread.start()
 
     try:
         while True:
-            # Check for power status changes (sleep/wake)
-            current_power_status = get_system_power_status()
-            if current_power_status != last_power_status:
-                if current_power_status == 0:  # AC power (wake)
-                    handle_wake_event(tagger)
-                last_power_status = current_power_status
+            # Process Windows messages to handle power events
+            try:
+                win32gui.PumpWaitingMessages()
+            except:
+                pass
 
-            # Check for new windows
+            # Only monitor for new windows - no periodic force checks
             win32gui.EnumWindows(
                 lambda hwnd, param: enum_windows_callback(hwnd, tagger), None
             )
@@ -336,6 +470,9 @@ def monitor_windows(tagger):
             time.sleep(1)
     except KeyboardInterrupt:
         print("Monitoring stopped")
+    finally:
+        if power_hwnd:
+            win32gui.DestroyWindow(power_hwnd)
 
 
 def toggle_taskbar():
@@ -420,6 +557,13 @@ def center_active_window_with_tag(tagger):
     return True
 
 
+def toggle_debug_mode():
+    """Toggle debug mode for window filtering"""
+    global DEBUG_MODE
+    DEBUG_MODE = not DEBUG_MODE
+    print(f"Debug mode: {'ON' if DEBUG_MODE else 'OFF'}")
+
+
 def main():
     """Main function"""
     if not load_configs():
@@ -429,15 +573,27 @@ def main():
     # Create WindowTagger instance
     tagger = WindowTagger()
 
-    # Register hotkeys
-    keyboard.add_hotkey("ctrl+alt+t", tagger.show_tag_dialog)
-    keyboard.add_hotkey("win+c", lambda: center_active_window_with_tag(tagger))
-    keyboard.add_hotkey("win+f12", toggle_taskbar)
+    # Register hotkeys with error handling
+    def safe_show_tag_dialog():
+        try:
+            print("Ctrl+Alt+T pressed - attempting to show tag dialog...")
+            tagger.show_tag_dialog()
+        except Exception as e:
+            print(f"Error showing tag dialog: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+    keyboard.add_hotkey("ctrl+alt+t", safe_show_tag_dialog)
+    keyboard.add_hotkey("win+f12", lambda: center_active_window_with_tag(tagger))
+    keyboard.add_hotkey("win+f11", toggle_taskbar)
+    keyboard.add_hotkey("win+f10", toggle_debug_mode)
 
     print("Hotkeys registered:")
     print("  Ctrl+Alt+T: Open tagging interface")
-    print("  Win+C: Center active window (if it has a tag definition)")
-    print("  Win+F12: Toggle taskbar visibility")
+    print("  Win+F12: Center active window (if it has a tag definition)")
+    print("  Win+F11: Toggle taskbar visibility")
+    print("  Win+F10: Toggle debug mode (shows window filtering details)")
 
     # Hide taskbar on startup
     hide_taskbar_on_startup()

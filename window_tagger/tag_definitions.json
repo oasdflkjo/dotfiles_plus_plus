@@ -78,11 +78,6 @@
     "class_name": "WinUIDesktopWin32WindowClass"
   },
   {
-    "name": "capcut",
-    "process_name": "CapCut.exe",
-    "class_name": "Qt622QWindowIcon"
-  },
-  {
     "name": "code",
     "process_name": "Code.exe",
     "class_name": "Chrome_WidgetWin_1",
